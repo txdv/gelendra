@@ -1,0 +1,240 @@
+#!/usr/bin/ruby
+require 'yaml'
+
+# TODO: Manage occurences in different archives (ALLOW THEM!)
+# TODO: Check if the files in the archives are all in small letters
+# TODO: Support different archives, create OOP archive control
+# TODO: Directive to copy all files logged in database to another directory
+# TODO: Remove // from copy messages
+# TODO: List archives in alphabetic order
+# TODO: Add --help and better userinterface
+
+class Database
+  def initialize(file)
+    f = File.open(file,"r")
+    @data = YAML::load(f.read)
+    f.close
+    @data = { } if @data == false
+  end
+
+  def add(archive)
+    @data[archive.filename] = archive.list
+  end
+
+  def delete(archive)
+    @data.delete(archive.filename)
+  end
+
+  def exists?(archive)
+    !@data[archive.filename].nil?
+  end
+
+  def save(file)
+    f = File.open(file,"w")
+    f.puts @data.to_yaml
+    f.close
+  end
+
+  def occurs(file)
+    @data.each do |key,val| 
+      return true if val.include?(file) 
+    end
+    return false
+  end
+
+  def archives
+    archs = []
+    @data.each { |key,val| archs.push(key) }
+    return archs
+  end
+
+  def files
+    filez = []
+    @data.each { |key,val| filez.concat(val) }
+    filez.reject! { |item| File.directory?(item) }
+    return filez.uniq.sort
+  end
+end
+
+
+class Archive
+  
+  attr_reader :filename
+
+  def check
+    `unzip -t #{@filename}`.split("\n").last.split.first == "No"
+  end
+
+  def initialize(filename)
+    @filename = filename
+  end
+
+  def list
+    files = []
+    `unzip -l #{@filename}`.each { |line| files.push line.split.last }
+    return files[3..files.size-3]
+  end
+
+  def files
+    list.reject { |file| File.directory?(file) }
+  end
+
+  def unpack
+    `unzip #{@filename}` 
+  end
+
+  def removefiles
+    directories = []
+    self.list.each do |file| 
+      if File.directory?(file)
+        directories.push file
+      else
+        `rm -f #{file}`
+      end
+    end
+    return directories
+  end
+  
+  def remove
+    dirs = removefiles
+    # deleting subdirectories
+    s = dirs.size + 1
+    while s != dirs.size do
+      s = dirs.size
+      dirs.each do |dir|
+        if empty(dir)
+          dirs.delete(dir)
+          `rm -r #{dir}`
+        end
+      end
+    end
+  end
+  
+  private
+
+  def empty(dir)
+    Dir.entries(dir).join == "..."
+  end
+end
+
+
+class Manager
+  def initialize(database)
+    @database = database
+  end
+
+  def install(ar)
+    if @database.exists?(ar)
+      puts "Archive already installed!"
+    else
+      if !ar.check
+        puts "Archive is corrupt!"
+        return
+      elsif file_occurs?(ar)
+        puts "Files from archive already occur!"
+        return
+      end
+
+      puts
+      puts "Installing Archive #{ar.filename} ..."
+      @database.add(ar)
+      ar.unpack
+      @database.save('database.yaml')
+      puts
+      ar.list.each { |file| puts "\t" + file }
+      puts
+    end
+  end
+
+  def remove(ar)
+    if @database.exists?(ar)
+      puts "Removing #{ar.filename} ... "
+      @database.delete(ar)
+      ar.remove
+      @database.save('database.yaml')
+    else
+     puts "File is not installed!" 
+    end
+  end
+
+  def delete(ar)
+    remove(ar)
+    puts "Deleting Archive #{ar.filename}"
+    `rm -f #{ar.filename}`
+  end
+
+  def list_archives
+    puts
+    puts "Installed archives:"
+    puts
+    puts @database.archives.sort
+    puts
+  end
+  def list_files
+    puts
+    puts "Installed files:"
+    puts
+    puts @database.files
+    puts
+  end
+
+  def list_maps
+    puts Dir["cstrike/maps/*.bsp"].collect { |file| File.basename(file).split(".").first }.sort
+  end
+
+  def copy(dir)
+    iterate(dir) { |from, to| `cp -r #{from} #{to}/#{from}` }
+  end
+
+  def softlink(dir)
+    pwd = `pwd`.strip
+    iterate(dir) { |file, dir| `ln -fs #{pwd}/#{file} #{dir}/#{file}` }
+  end
+
+  def iterate(dir)
+    @database.files.each do |file| 
+      `mkdir -p #{dir}/#{File.dirname(file)}`
+      puts "Creating #{dir}/#{file}"
+      yield(file, dir)
+      #`cp -l #{file} #{dir}/#{file}`
+      #puts "ln -s #{file} #{dir}/#{file}"
+    end
+  end
+  private
+  def file_occurs?(ar)
+    ar.files.each { |file| return true if @database.occurs(file) }
+    return false
+  end
+end
+
+db = Database.new('database.yaml')
+#ar = Archive.new(ARGV[1])
+man = Manager.new(db)
+
+case ARGV[0]
+  when 'install'
+    ar = Archive.new(ARGV[1])
+    man.install(ar)
+  when 'remove'
+    ar = Archive.new(ARGV[1])
+    man.remove(ar)
+  when 'delete'
+    ar = Archive.new(ARGV[1])
+    man.delete(ar)
+  when 'list'
+    if ARGV[1] == 'archives'
+      man.list_archives
+    elsif ARGV[1] == 'files'
+      man.list_files
+    elsif ARGV[1] == 'maps'
+      man.list_maps
+    else
+      puts "Normal input, bastard!"
+    end
+  when 'copy'
+    man.copy(ARGV[1])
+  when 'softlink'
+    man.softlink(ARGV[1])
+  else
+    puts "some help shit"
+end
