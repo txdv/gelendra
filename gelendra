@@ -51,16 +51,23 @@ class Cli
     #@manager = manager
   end
 
+  def zip_rebase
+    @pm.rebase
+  end
+
+  def zip_check
+
+  end
+
   def package_install(name)
     @baseinfo.get_packages(name).each do |name| 
-      #package_install_each(name) 
-      #begin
+      begin
         puts
         puts "Installing #{name}"
         @pm.install(name)
-      #rescue => msg
-      #  puts "\tError during installation: #{msg}"
-      #end
+      rescue => msg
+        puts "\tError during installation: #{msg}"
+      end
     end
   end
 
@@ -300,7 +307,9 @@ class PackageManager
     filelist =  @localinfo.files(package)
     filelist.each do |file| 
       puts "\tremoving #{file}"
-      FileUtils.rm file
+      if (!File.directory?(file))
+        FileUtils.rm file
+      end
     end
     @localinfo.delete(package)
     @localinfo.save
@@ -321,16 +330,19 @@ class PackageManager
 
     filelist = nil
     Zip::ZipFile.open(filefullpath) { |package| 
-      filelist = package.entries.collect { |x| x.name }
-      puts filelist
+      # filelist = package.entries.collect { |x| x.name }
+      filelist = package.entries.reject { |e| e.directory? }.collect { |x| x.name }.sort
       @localinfo.add(filename, filelist)
 
       # create all directories if not existend
       filelist.each { |entry| get_directories(entry).each { |dir| install_dir dir } }
-
+      
+      # TODO: sort entry names
       package.entries.each do |entry|
-        puts "\textracting file #{entry.name}" 
-        entry.extract
+        if !entry.directory?
+          puts "\textracting file #{entry.name}" 
+          entry.extract
+        end
       end
     }
     @localinfo.save
@@ -350,7 +362,6 @@ class PackageManager
     end
     end
   end
-
 
   def one_less(file_or_dir)
     base = File.basename(file_or_dir)
@@ -382,6 +393,25 @@ class PackageManager
   def dir_empty(dir)
     Dir.entries(dir).join == "..."
   end
+
+  def rebase
+    if !@localinfo.zipfile.nil?
+    Zip::ZipFile.open(@localinfo.zipfile, "wb") do |outputfile|
+      @localinfo.all_files.each do |file|
+        if outputfile.find_entry(file).nil?
+          puts "#{@localinfo.zipfile}: missing and adding #{file}"
+          outputfile.add(file, file)
+        end
+        outputfile.commit # makes it more interactive
+      end
+    end
+    end
+  end
+
+  def zipfile 
+    return Zip::ZipFile.open(@localinfo.zipfile, "wb")
+  end
+
 end
 
 
