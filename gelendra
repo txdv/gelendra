@@ -306,9 +306,17 @@ class PackageManager
 
     filelist =  @localinfo.files(package)
     filelist.each do |file| 
-      puts "\tremoving #{file}"
       if (!File.directory?(file))
-        FileUtils.rm file
+        if File.exists?(file)
+          puts "\tremoving #{file}"
+          FileUtils.rm file
+        else
+          puts "\tWarning: #{file} does not exist, can't remove"
+        end
+        get_directories(file).sort.reverse.each do |dir|
+          puts "\tdeleting directory #{dir} since empty"
+          FileUtils.rmdir dir if File.exists?(dir) and dir_empty(dir)
+        end
       end
     end
     @localinfo.delete(package)
@@ -318,7 +326,11 @@ class PackageManager
     Zip::ZipFile.open(@localinfo.zipfile, "wb") do |outputfile|
       filelist.each do |file| 
         puts "\tremoving #{file} from #{@localinfo.zipfile}"
-        outputfile.remove(file)
+        if !outputfile.find_entry(file).nil?
+          outputfile.remove(file)
+        else
+          puts "\tWARNING: #{@localinfo.zipfile} file does not exist in archive"
+        end
       end
     end
     end
@@ -341,7 +353,11 @@ class PackageManager
       package.entries.each do |entry|
         if !entry.directory?
           puts "\textracting file #{entry.name}" 
-          entry.extract
+          if !File.exists?(entry.name)
+            entry.extract
+          else
+            puts "\tWARNING: file #{entry.name} already exists, omitting"
+          end
         end
       end
     }
@@ -395,9 +411,14 @@ class PackageManager
   end
 
   def rebase
+    # TODO: add specific game architecture support
+
+    files = @localinfo.all_files.reject { |f| f.split("/")[1] == "addons" }
+
+
     if !@localinfo.zipfile.nil?
     Zip::ZipFile.open(@localinfo.zipfile, "wb") do |outputfile|
-      @localinfo.all_files.each do |file|
+      files.each do |file|
         if outputfile.find_entry(file).nil?
           puts "#{@localinfo.zipfile}: missing and adding #{file}"
           outputfile.add(file, file)
