@@ -1,5 +1,9 @@
 #!/usr/bin/ruby
 require 'yaml'
+require 'rubygems'
+require 'zip/zip'
+require 'etc'
+require 'fileutils'
 
 # TODO: Manage occurences in different archives (ALLOW THEM!)
 # TODO: Check if the files in the archives are all in small letters
@@ -7,36 +11,263 @@ require 'yaml'
 # TODO: Directive to copy all files logged in database to another directory
 # TODO: Remove // from copy messages
 # TODO: List archives in alphabetic order
-# TODO: Add --help and better userinterface
+# TODO: Add help
 
-class Database
-  def initialize(file)
-    f = File.open(file,"r")
-    @data = YAML::load(f.read)
-    f.close
-    @data = { } if @data == false
+BASEINFO = "#{Etc.getpwuid.dir}/.gelendra.yaml"
+class BaseInfo
+  
+  def initialize
+    File.open(BASEINFO, "a+") do |f|
+      @data = YAML::load(f.read)
+      @data = {"base_dir"=>[]} if @data == false
+    end
   end
 
-  def add(archive)
-    @data[archive.filename] = archive.list
+  def base_dir
+    @data["base_dir"]
+  end
+
+  def save
+    File.open(BASEINFO, "w") { |f| f.puts @data.to_yaml }
+  end
+
+  def get_packages(pattern)
+    pkg = []
+    base_dir.each do |dir|
+      pkg.concat Dir["#{dir}/#{pattern}"]
+    end
+    return pkg
+  end
+
+end
+
+class Cli
+  public
+  def initialize(baseinfo, localinfo)
+    @baseinfo = baseinfo
+    @localinfo = localinfo
+    @pm = PackageManager.new(localinfo)
+    # @localinfo = localinfo
+    #@manager = manager
+  end
+
+  def package_install(name)
+    @baseinfo.get_packages(name).each do |name| 
+      #package_install_each(name) 
+      #begin
+        puts
+        puts "Installing #{name}"
+        @pm.install(name)
+      #rescue => msg
+      #  puts "\tError during installation: #{msg}"
+      #end
+    end
+  end
+
+  def package_remove(name)
+    # TODO: THIS IS A BAD HACK, PLEASE REMAKE WITH HIDDEN DIR AND EMPTY FILES
+    # Which obviously is a hack too, but better then writing own parser ...
+    list = @baseinfo.get_packages(name).reject { |e| !@localinfo.exists?(File.basename(e)) }
+    list.collect! { |fullname| File.basename(fullname) }
+
+    list.each do |package|
+      begin
+        puts
+        puts "Removing #{package}"
+        @pm.remove(package)
+      rescue => msg
+        puts "Error during removing: #{msg}"
+      end
+    end
+  end
+
+  def package_available(name = "*")
+    puts @baseinfo.get_packages(name)
+  end
+
+  def package_list(name = "*")
+    # TODO: SAME HACK, REMOVE PLEASE
+    list = @baseinfo.get_packages(name).reject { |e| !@localinfo.exists?(File.basename(e)) }
+    list.collect! { |fullname| File.basename(fullname) }
+    puts list
+  end
+
+  def basedir_add(dir)
+    if File.directory?(dir)
+      dir = File.expand_path(dir)
+      if !@baseinfo.base_dir.include?(dir)
+        @baseinfo.base_dir.push File.expand_path(dir)
+        @baseinfo.save
+      else
+        puts "Directory already in basedir path: #{dir}"
+      end
+    else
+      puts "No such directory: #{dir}"
+    end
+  end
+
+  def basedir_rem(dir)
+    dir = File.expand_path(dir)
+    
+    if @baseinfo.base_dir.include?(dir)
+      @baseinfo.base_dir.delete(dir)
+      @baseinfo.save
+      puts "basedir removed: #{dir}"
+    else
+      puts "No such directory in database: #{dir}"
+    end
+  end
+
+  def basedir_list
+    puts "Base directories remembered:\n"
+    puts
+    puts @baseinfo.base_dir
+    puts
+  end
+
+  def list_packages(name = "*")
+    package_list(name)
+  end
+
+  def list_files
+    puts @localinfo.all_files
+  end
+
+  def list_archives
+    puts @localinfo.archives
+  end
+
+  def list_allmaps
+    puts mapify(allmaps)
+  end
+
+  def list_installedmaps
+    puts mapify(allmaps.reject { |m| !@localinfo.all_files.include?(m)})
+  end
+
+  def list_basemaps    
+    puts mapify(allmaps.reject { |m| @localinfo.all_files.include?(m)})
+  end
+
+  def help
+    puts <<HELPSTRING
+  gelendra v0.1
+  
+  install <archive>
+    extracts archive in the current directory and puts all the data to the local database
+  remove <archive>
+    removes the extracted archive files
+
+  basedir add <directory>
+    remembers a directory, where it will look for packages
+
+  basedir rem
+    removes a basedir <directory>
+HELPSTRING
+  end
+
+  private
+   
+  def mapify(maps)
+    maps.collect do |i|
+      f = File.basename(i) 
+      f = f.split(".")
+      f.pop
+      f = f.join(".")
+      f
+    end
+  end
+
+  def allmaps
+    Dir["cstrike/maps/*.bsp"]
+  end
+
+end
+
+class CliInvoker
+  public
+  def initialize(klass)
+    @klass = klass
+    @methods = klass.public_methods - Class.public_methods
+  end
+
+  def run(args)
+    name = []
+    
+    methods = @methods
+
+    x = 0
+    while (methods.size > 1)
+      methods = collect_start(methods, ARGV[x])
+      methods = trunc(methods, ARGV[x].to_s)
+      name.push ARGV[x]
+      
+      if (methods.size == 1)
+        funcname = name.join("_")
+        arguments = ARGV[x+1..9999].join(" ")
+
+        if arguments.size == 0
+          evalstr = "@klass.#{funcname}"
+      
+        else
+          evalstr = "@klass.#{funcname}(#{arguments.inspect})"
+        end
+        # puts evalstr
+        # puts
+        eval(evalstr)
+        return
+      end
+      x += 1
+    end
+  end
+
+  private 
+  def trunc(methods, arg)
+    methods.collect { |name| name.split("_")[1...9999].join("_") }
+  end
+
+  def starts_with(fullname, startstr)
+    fullname.split("_").first == startstr
+  end
+  
+  def collect_start(methods, startstr)
+    methods.reject { |func| !starts_with(func, startstr) }
+  end
+end
+
+class LocalInfo
+  def initialize(file = 'database.yaml')
+    begin
+
+      File.open(file,"a+") { |f| @data = YAML::load(f.read) }
+    rescue
+      @data = { :zipfile=> nil, :installed => { } } 
+    end
+    @data = { :zipfile=> nil, :installed => { } } if @data == false
+  end
+
+  def zipfile
+    @data[:zipfile]
+  end
+
+  def add(archivename, list)
+    @data[:installed][archivename] = list
   end
 
   def delete(archive)
-    @data.delete(archive.filename)
+    @data[:installed].delete(archive)
   end
 
   def exists?(archive)
-    !@data[archive.filename].nil?
+    !@data[:installed][archive].nil?
   end
 
-  def save(file)
-    f = File.open(file,"w")
-    f.puts @data.to_yaml
-    f.close
+  def save(file = 'database.yaml')
+     File.open(file,"w") { |f| f.puts @data.to_yaml }
   end
 
   def occurs(file)
-    @data.each do |key,val| 
+    @data[:installed].each do |key,val| 
       return true if val.include?(file) 
     end
     return false
@@ -44,197 +275,135 @@ class Database
 
   def archives
     archs = []
-    @data.each { |key,val| archs.push(key) }
+    @data[:installed].each { |key,val| archs.push(key) }
     return archs
   end
 
-  def files
-    filez = []
-    @data.each { |key,val| filez.concat(val) }
-    filez.reject! { |item| File.directory?(item) }
-    return filez.uniq.sort
+  def files(archive)
+    @data[:installed][archive]
+  end
+
+  def all_files
+    all = []
+    archives.each { |arch| all.concat(files(arch)) }
+    return all
   end
 end
 
-
-class Archive
-  
-  attr_reader :filename
-
-  def check
-    `unzip -t #{@filename}`.split("\n").last.split.first == "No"
+class PackageManager
+  def initialize(localinfo)
+    @localinfo = localinfo
   end
 
-  def initialize(filename)
-    @filename = filename
-  end
+  def remove(package)
 
-  def list
-    files = []
-    `unzip -l #{@filename}`.each { |line| files.push line.split.last }
-    return files[3..files.size-3]
-  end
-
-  def files
-    list.reject { |file| File.directory?(file) }
-  end
-
-  def unpack
-    `unzip #{@filename}` 
-  end
-
-  def removefiles
-    directories = []
-    self.list.each do |file| 
-      if File.directory?(file)
-        directories.push file
-      else
-        `rm -f #{file}`
+    filelist =  @localinfo.files(package)
+    filelist.each do |file| 
+      puts "\tremoving #{file}"
+      FileUtils.rm file
+    end
+    @localinfo.delete(package)
+    @localinfo.save
+    
+    if !@localinfo.zipfile.nil?
+    Zip::ZipFile.open(@localinfo.zipfile, "wb") do |outputfile|
+      filelist.each do |file| 
+        puts "\tremoving #{file} from #{@localinfo.zipfile}"
+        outputfile.remove(file)
       end
     end
-    return directories
+    end
   end
-  
-  def remove
-    dirs = removefiles
-    # deleting subdirectories
-    s = dirs.size + 1
-    while s != dirs.size do
-      s = dirs.size
-      dirs.each do |dir|
-        if empty(dir)
-          dirs.delete(dir)
-          `rm -r #{dir}`
+
+  def install(filefullpath)
+    filename = File.basename(filefullpath)
+    raise "Package #{filename} already installed!" if @localinfo.exists?(filename)
+
+    filelist = nil
+    Zip::ZipFile.open(filefullpath) { |package| 
+      filelist = package.entries.collect { |x| x.name }
+      puts filelist
+      @localinfo.add(filename, filelist)
+
+      # create all directories if not existend
+      filelist.each { |entry| get_directories(entry).each { |dir| install_dir dir } }
+
+      package.entries.each do |entry|
+        puts "\textracting file #{entry.name}" 
+        entry.extract
+      end
+    }
+    @localinfo.save
+
+    # modify the giant zip file
+
+    if !@localinfo.zipfile.nil?
+    Zip::ZipFile.open(@localinfo.zipfile, "wb") do |outputfile| 
+      filelist.each do |name|
+        puts "\tadding #{name} to #{@localinfo.zipfile}"
+        if outputfile.find_entry(name).nil?
+          outputfile.add(name, name)
+        else
+        puts "\tWARNING: file #{name} in #{@localinfo.zipfile} already exists"
         end
       end
     end
+    end
+  end
+
+
+  def one_less(file_or_dir)
+    base = File.basename(file_or_dir)
+    return file_or_dir[0..file_or_dir.size-base.size-2]
+  end
+  def one_less?(file_or_dir)
+    base = File.basename(file_or_dir)
+    return file_or_dir.size-base.size-2 > 0
+  end
+
+  def get_directories(file)
+    filename = File.basename(file)
+    dirname = one_less(file)
+
+    dirs = [dirname]
+
+    while (one_less?(dirname))
+      dirname = one_less(dirname)
+      dirs.push dirname
+    end
+    
+    return dirs.sort
+  end
+
+  def install_dir(dir)
+    FileUtils.mkdir(dir) if !File.directory?(dir)
   end
   
-  private
-
-  def empty(dir)
+  def dir_empty(dir)
     Dir.entries(dir).join == "..."
   end
 end
 
 
-class Manager
-  def initialize(database)
-    @database = database
-  end
 
-  def install(ar)
-    if @database.exists?(ar)
-      puts "Archive already installed!"
-    else
-      if !ar.check
-        puts "Archive is corrupt!"
-        return
-      elsif file_occurs?(ar)
-        puts "Files from archive already occur!"
-        return
-      end
-
-      puts
-      puts "Installing Archive #{ar.filename} ..."
-      @database.add(ar)
-      ar.unpack
-      @database.save('database.yaml')
-      puts
-      ar.list.each { |file| puts "\t" + file }
-      puts
-    end
-  end
-
-  def remove(ar)
-    if @database.exists?(ar)
-      puts "Removing #{ar.filename} ... "
-      @database.delete(ar)
-      ar.remove
-      @database.save('database.yaml')
-    else
-     puts "File is not installed!" 
-    end
-  end
-
-  def delete(ar)
-    remove(ar)
-    puts "Deleting Archive #{ar.filename}"
-    `rm -f #{ar.filename}`
-  end
-
-  def list_archives
-    puts
-    puts "Installed archives:"
-    puts
-    puts @database.archives.sort
-    puts
-  end
-  def list_files
-    puts
-    puts "Installed files:"
-    puts
-    puts @database.files
-    puts
-  end
-
-  def list_maps
-    puts Dir["cstrike/maps/*.bsp"].collect { |file| File.basename(file).split(".").first }.sort
-  end
-
-  def copy(dir)
-    iterate(dir) { |from, to| `cp -r #{from} #{to}/#{from}` }
-  end
-
-  def softlink(dir)
-    pwd = `pwd`.strip
-    iterate(dir) { |file, dir| `ln -fs #{pwd}/#{file} #{dir}/#{file}` }
-  end
-
-  def iterate(dir)
-    @database.files.each do |file| 
-      `mkdir -p #{dir}/#{File.dirname(file)}`
-      puts "Creating #{dir}/#{file}"
-      yield(file, dir)
-      #`cp -l #{file} #{dir}/#{file}`
-      #puts "ln -s #{file} #{dir}/#{file}"
-    end
-  end
-  private
-  def file_occurs?(ar)
-    ar.files.each { |file| return true if @database.occurs(file) }
-    return false
-  end
+if !File.exists?('database.yaml')
+  puts "Not under gelendra control, please initialize"
+  # exit
 end
 
-db = Database.new('database.yaml')
-#ar = Archive.new(ARGV[1])
-man = Manager.new(db)
+baseinfo = BaseInfo.new
+localinfo = LocalInfo.new
 
-case ARGV[0]
-  when 'install'
-    ar = Archive.new(ARGV[1])
-    man.install(ar)
-  when 'remove'
-    ar = Archive.new(ARGV[1])
-    man.remove(ar)
-  when 'delete'
-    ar = Archive.new(ARGV[1])
-    man.delete(ar)
-  when 'list'
-    if ARGV[1] == 'archives'
-      man.list_archives
-    elsif ARGV[1] == 'files'
-      man.list_files
-    elsif ARGV[1] == 'maps'
-      man.list_maps
-    else
-      puts "Normal input, bastard!"
-    end
-  when 'copy'
-    man.copy(ARGV[1])
-  when 'softlink'
-    man.softlink(ARGV[1])
-  else
-    puts "some help shit"
+=begin
+Zip::ZipFile.open(localinfo.zipfile, "wb") do |file|
+  file.get_output_stream("readme.txt") do |stream|
+    stream.puts <<ENDOFTEXT
+cs.six.lt mapai
+ENDOFTEXT
+  end
 end
+=end
+
+cli = Cli.new(baseinfo, localinfo);
+cliinvoker = CliInvoker.new(cli)
+cliinvoker.run(ARGV)
