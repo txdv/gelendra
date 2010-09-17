@@ -23,18 +23,23 @@ require 'zip/zip'
 require 'etc'
 require 'fileutils'
 
-# TODO: Manage occurences in different archives (ALLOW THEM! if files are equal)
+# Functionality:
 # TODO: Check if the files in the archives are all in small letters
+# TODO: Add a function to downcase all files in a archive file
 # TODO: Support different archives, create OOP archive control
-# TODO: Directive to copy all files logged in database to another directory
-# TODO: Add copy functionality
-# TODO: Add softlinking
-# TODO: Add central mangagement of installs
-# TODO: Add independent game architecture (list maps of other games, pick only public files)
+# TODO: Add function which copies all files logged in database to another directory
+# TODO: Add database file softlinking
+# TODO: Add package checking (read entities!) (check if this feature is complete)
+# TODO: Add a package creator: you select a dir with files, it finds all bspmaps and
+#       creates a lot of packages into a destination dir (only complete ofcourse)
+
+# CliInvoker:
 # TODO: Adjust CliInvoker to better work (let single command lines work)
 # TODO: Add command line function help definition support in CliInvoker
-# TODO: Add package checking (read entities!)
-# TODO: fix zips, downcase all names
+
+# Misc:
+# TODO: Add independent game architecture (list maps of other games, pick only public files)
+# TODO: Manage occurences in different archives (ALLOW THEM! if files are equal)
 
 class String
   def shift(char)
@@ -44,8 +49,8 @@ class String
   end
 end
 
+# quick fix to make zip files work with *seek*
 class Zip::ZipInputStream
-  # quick fix to make it work with *seek*
   # TODO: init local variable @seekpos in constructor
   def seek(pos)
     @seekpos = 0 if @seekpos.nil?
@@ -775,6 +780,7 @@ class Cli
     end
   end
 
+=begin
   def softlink_base(basedir, pattern = "*")
     # TODO: rewrite localinfo
     puts pattern
@@ -786,6 +792,7 @@ class Cli
   def softlink_rebase
 
   end
+=end
 
   def help
     puts <<HELPSTRING
@@ -803,38 +810,36 @@ under certain conditions; read the file 'LICENSE' for further details
   basedir list
     lists all added basedirs
 
-  package install <package>
-    extracts package in the current directory and puts all the data to the local database
+  package install <pattern|package>
+    extracts a package in the current directory and puts all the data to the local database
+    or all packages matching the pattern
 
-  package remove <package>
-    removes the extracted package files
+  package remove <pattern|package>
+    removes the extracted package files, or all packages matching the pattern
 
   package list <pattern>
-    lists all locally installed packages using the pattern, if not pattern provided, all are listed
+    lists all locally installed packages using the pattern, if no pattern provided, all packages are listed
 
   package available <pattern>
     lists all available packages using the pattern, if no pattern provided, all are listed
 
-  zip check
-    checks if all installed files are in the zip file specified in database
-
-  zip rebase
-    adds missing files to the zip file specified in database
+  list allmaps
+    lists all installed maps
 
   list availablepackages
     lists all available packages in basedirectories
 
-  list installedpackages
-    lists locally installed packages
-  
-  list allmaps
-    lists all installed maps
+  list basemaps
+    lists maps that were installed without gelendra
 
   list installedmaps
     lists all maps that were installed using gelendra
 
-  list basemaps
-    lists maps that were installed without gelendra
+  list installedpackages
+    lists locally installed packages
+  
+  list packages <pattern>
+    lists all locally installed packages using the pattern, if not pattern provided, all are listed
 
   database check
     checks the local database for any errors (occuring directories, missing files)
@@ -843,6 +848,12 @@ under certain conditions; read the file 'LICENSE' for further details
     removes occuring directories from database
     removes files which are missing in database
     removes database entries of files which are not present
+
+  zip check
+    checks if all installed files are in the zip file specified in database
+
+  zip rebase
+    adds missing files to the zip file specified in database
 
   help
     prints this help
