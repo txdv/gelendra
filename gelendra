@@ -16,6 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 =end
+
 require 'yaml'
 require 'rubygems'
 require 'zip/zip'
@@ -30,14 +31,187 @@ require 'fileutils'
 # TODO: Add softlinking
 # TODO: Add central mangagement of installs
 # TODO: Add independent game architecture (list maps of other games, pick only public files)
+# TODO: Adjust CliInvoker to better work (let single command lines work)
+# TODO: Add command line function help definition support in CliInvoker
+# TODO: Add package checking (read entities!)
+# TODO: fix zips, downcase all names
+
+class String
+  def shift(char)
+    tmp = self.split(char)
+    tmp.shift
+    return tmp.join(char)
+  end
+end
+
+class Zip::ZipInputStream
+  # quick fix to make it work with *seek*
+  # TODO: init local variable @seekpos in constructor
+  def seek(pos)
+    @seekpos = 0 if @seekpos.nil?
+    raise "Operation not permited, seek in ZipInputStream works only one way, now at #{@seekpos} and trying to go to #{pos}" if (pos < @seekpos)
+    read(pos - @seekpos)
+    @seekpos = pos
+    return
+  end
+
+  def read(size)
+    ret = super(size)
+    @seekpos += size
+    return ret
+  end
+
+end
+
+class BSP
+
+  QUAKE_VALVE_GOLDSRC = 30
+  BSP_HEADER_ENTITIES = 0
+  BSP_HEADER_MIPTEX = 2
+
+  def self.read_dentry
+    @stream.read(8).unpack("II")
+  end
+
+  def self.read_uint
+    # read an unsigned integer
+    @stream.read(4).unpack("I")[0]
+  end
+
+  def self.read_string(size)
+    @stream.read(size).unpack("Z*")[0]
+  end
+  
+  def self.read_header
+    @stream.seek(0)
+    raise "This file is not a valve bsp map" if read_uint != QUAKE_VALVE_GOLDSRC
+    @header = []
+    15.times { @header.push read_dentry }
+  end
+
+  def self.read_mipheader
+    @stream.seek(@header[BSP_HEADER_MIPTEX][0])
+    @mip_offset = []
+    read_uint.times { @mip_offset.push read_uint + @header[BSP_HEADER_MIPTEX][0] }
+  end
+
+  def self.read_mips
+    textures = []
+    @mip_offset.each do |startpos|
+      @stream.seek(startpos)
+      name = @stream.read(16).unpack("Z*")[0].downcase
+
+      height, width, offset1, offset2, offset3, offset4 = @stream.read(6*4).unpack("L"*6)
+      #p [height, width]
+      #p [offset1, offset2, offset3, offset4]
+      textures.push name if (offset1 == 0)
+      #puts name
+
+    end
+    return textures
+  end
+
+  def self.read_entity_entries
+    @stream.seek(@header[BSP_HEADER_ENTITIES][0])
+    entities = read_string(@header[BSP_HEADER_ENTITIES][1])
+    return EntityParser.get_files(EntityParser.parse(entities))
+  end
+
+  def self.get_info(stream)
+    @stream = stream
+
+    read_header
+    wads, files = read_entity_entries
+    read_mipheader
+    textures = read_mips
+
+    return wads, files, textures
+  end
+
+end
+
+class EntityParser
+  @sky_endings = [ "bk", "ft", "dn", "up" , "rt", "lf" ]
+  def self.parse(text)
+    entities = []
+    entity = nil
+    text.each_line do |line|
+      case line.chop
+      when "{"
+        entity = {}
+      when "}"
+        entities.push(entity)
+      when /"(.+|)" "(.+|)"/
+        entity[$1] = $2
+      else
+      end
+    end
+    return entities
+  end
+  
+  def self.get_files(entities)
+    # TODO: find gibmodels
+
+    # get the mdl's and sprites
+    tmp = entities.collect { |entity| entity["model"] if entity.has_key?("model") }.uniq
+    tmp.delete(nil)
+    files = tmp.collect { |file| file if !(file =~ /\*\d+/) }.uniq
+    files.delete(nil)
+
+    if entities[0].has_key?("skyname")
+      files += @sky_endings.collect { |ending| "gfx/env/" + entities[0]["skyname"] + ending + ".tga" }
+    end
+
+    wads = []
+    if entities[0].has_key?("wad")
+      wads = entities[0]["wad"].split(";").collect { |i| i.split("\\").last }
+    end
+
+    return [wads, files.sort!]
+  end
+end
+
+class WAD
+  def self.read_magic
+    @stream.read(4).unpack("Z4")[0]
+  end
+
+  def self.read_integer
+    # read an unsigned integer
+    @stream.read(4).unpack("I")[0]
+  end
+
+  def self.get_entries(stream)
+    @stream = stream
+    @stream.seek(0)
+    raise "The file supplied has no wad" if read_magic != "WAD3"
+    numentries = read_integer
+    offset = read_integer
+
+    @stream.seek(offset)
+    names = []
+    numentries.times do
+      names.push @stream.read(4 + 4 + 4 + 1 + 1 + 2 + 16).unpack("IIIccsZ*").last
+    end
+    return names
+  end
+end
+
 
 class BaseInfo
+  include Singleton
+
   BASEINFOFILE = "#{Etc.getpwuid.dir}/.gelendra.yaml"
+  BASEFILES = "#{Etc.getpwuid.dir}/.basefiles.yaml"
 
   def initialize
     File.open(BASEINFOFILE, "a+") do |f|
       @data = YAML::load(f.read)
       @data = {"base_dir"=>[]} if @data == false
+    end
+
+    File.open(BASEFILES, "r") do |f|
+      @basefiles = YAML::load(f.read)
     end
   end
 
@@ -56,6 +230,18 @@ class BaseInfo
     end
     return pkg.sort
   end
+
+  def include?(file)
+    @basefiles[:files].each do |key,arr|
+      return true if arr.include?(file)
+    end
+    return false
+  end
+
+  def wads
+    @basefiles[:wads]
+  end
+  
 end
 
 
@@ -136,14 +322,102 @@ class LocalInfo
   end
 end
 
+class Package
+  def initialize(fullfilename)
+    @fullfilename = fullfilename
+  end
+
+  def open
+    @zip = Zip::ZipFile.open(@fullfilename, "r")
+  end
+
+  def close
+    @zip.close
+  end
+
+  def get_info_from_bsp
+    
+    return BSP.get_info(get_bsp.get_input_stream) if is_map?
+    return nil
+  end
+
+  def get_files_from_zip
+    @zip.entries.reject { |e| e.is_directory }.collect { |e| e.name.shift("/") }.sort
+  end
+
+  def is_map?
+    !get_bsp.nil?
+  end
+
+
+  def get_bsp
+    bsp = nil
+    @zip.entries.each do |entry|
+      if File.extname(entry.name) == ".bsp"
+        return entry
+      end
+    end
+    return nil
+  end
+  
+  def get_wad_entries
+    return @zip.entries.reject { |e| File.extname(e.name) != ".wad" }
+  end
+end
 
 class PackageManager
   def initialize(localinfo)
     @localinfo = localinfo
   end
 
-  def remove(package)
+  def package_check(package)
+    pack = Package.new(package)
+    pack.open
+    
+    if (!pack.is_map?)
+      pack.close
+      return
+    end
 
+    bsp_wads, files, textures = pack.get_info_from_bsp
+
+    #p pack.get_files_from_zip
+    files.each do |file|
+      file = file.downcase
+      if BaseInfo.instance.include?(file)
+        #puts "Found in base directory"
+      elsif pack.get_files_from_zip.include?(file)
+        #puts "Found in zip archive" 
+      else
+        #p pack.get_files_from_zip
+        puts "File missing: #{file}"
+      end
+
+    end
+    
+    all_wads = BaseInfo.instance.wads
+    
+    maybe = bsp_wads.clone
+
+    bsp_wads.each do |wad|
+      if all_wads.include?(wad)
+        maybe.delete(wad)
+        textures -= all_wads[wad] if all_wads.include?(wad)
+      end
+    end
+
+    pack.get_wad_entries.each do |entry|
+      textures -= WAD.get_entries(entry.get_input_stream)
+      maybe.delete(entry.name)
+    end
+
+    if textures.size > 0
+      puts "Critical error: Missing textures #{textures.join(", ")}"
+      puts "                The bsp map suggestes that these files are in #{maybe.join(", ")}"
+    end
+  end
+
+  def remove(package)
     filelist =  @localinfo.files(package)
     filelist.each do |file| 
       if (!File.directory?(file))
@@ -293,6 +567,7 @@ class PackageManager
       end
     end
   end
+
 end
 
 
@@ -331,6 +606,7 @@ class CliInvoker
       end
       x += 1
     end
+    puts "gelendra: did not understand you, maybe you want need some help? gelendra help"
   end
 
   private 
@@ -366,7 +642,7 @@ class Cli
     @pm.check
   end
 
-  def package_install(name)
+  def package_install(name = "*")
     @baseinfo.get_packages(name).each do |name| 
       begin
         puts
@@ -378,8 +654,8 @@ class Cli
     end
   end
 
-  def package_remove(name)
-    @localinfo.get_packages.each do |package|
+  def package_remove(name = "*")
+    @localinfo.get_packages(name).each do |package|
       begin
         puts
         puts "Removing #{package}"
@@ -387,6 +663,18 @@ class Cli
       rescue => msg
         puts "Error during removing: #{msg}"
       end
+    end
+  end
+
+  def package_check(name = "*")
+    @baseinfo.get_packages(name).each do |package|
+    begin
+      puts
+      puts "Checking #{package}"
+      @pm.package_check(package)
+    rescue => msg
+      puts "Error during checking: #{msg}"
+    end
     end
   end
 
@@ -431,9 +719,7 @@ class Cli
     puts
   end
 
-  def list_packages(name = "*")
-    package_list(name)
-  end
+  alias :list_packages :package_list
 
   def list_files
     puts @localinfo.all_files
@@ -487,6 +773,18 @@ class Cli
         puts "#{file} is a actually a directory" if File.directory?(file)
       end
     end
+  end
+
+  def softlink_base(basedir, pattern = "*")
+    # TODO: rewrite localinfo
+    puts pattern
+    @localinfo.get_packages(pattern).each do |package|
+      puts @localinfo.files(package)
+    end
+  end
+
+  def softlink_rebase
+
   end
 
   def help
@@ -570,7 +868,7 @@ HELPSTRING
 
 end
 
-baseinfo = BaseInfo.new
-cli = Cli.new(BaseInfo.new, LocalInfo.new(baseinfo));
+baseinfo = BaseInfo.instance
+cli = Cli.new(BaseInfo.instance, LocalInfo.new(baseinfo));
 cliinvoker = CliInvoker.new(cli)
 cliinvoker.run(ARGV)
