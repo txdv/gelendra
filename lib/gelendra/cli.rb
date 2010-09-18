@@ -298,7 +298,22 @@ class Cli
 
   def create_packages(src, dst)
     mapping = Dir.find_all_files(src).create_filemap
-    #mapping.clashes { |files| p files }
+    
+    @overviews = []
+
+    mapping.each do |basename, files|
+      if files.size == 1 then
+        mapping[basename] = files.first
+      else
+        files = files.reject { |file| Overview.check(file) }
+        if files.size == 1
+          mapping[basename] = files.first
+        else
+          puts "#{files.inspect} clash, remove some"
+          mapping.delete(basename)
+        end
+      end
+    end
 
     rets = []
     file_count = 0

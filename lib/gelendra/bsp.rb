@@ -149,3 +149,14 @@ class EntityParser
     return [wads, files.sort!]
   end
 end
+
+class Overview
+  def self.check(file)
+    keywords = ["global", "ZOOM", "ORIGIN", "ROTATED", "layer", "IMAGE", "HEIGHT"]
+    File.open(file) do |text|
+      text = text.read
+      arr = keywords.collect { |keyword| text.include?(keyword) }.uniq
+      return arr.first && arr.size == 1
+    end
+  end
+end

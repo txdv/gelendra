@@ -51,7 +51,16 @@ end
 class Array
   def create_filemap
     map = {}
-    self.each { |file| map[file.basename] = file }
+    self.each do |file|
+      name = file.basename
+
+      if map.has_key?(name)
+        map[name].push file
+      else
+        map[name] = [file]
+      end
+
+    end
     return map
   end
 

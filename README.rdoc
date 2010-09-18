@@ -8,6 +8,18 @@ gelendra has the following features.
  * package management - installing/removing/listing available and installed once
  * package checking, if a map package has all needed files
 
+== Usage
+
+=== Packets
+
+If you have a lot of map related files in directory which are sorted or even not sorted and you want
+to create archives for every map just write
+
+gelendra create packages src_directory/ dst_directory/
+
+It will look for all the files in the src_directory, check if there are any clashes (two or more files
+which have the same name but are different), inform you and terminate if there are, go on creating packages.
+
 == License
 
 gelendra is available under the gpl v3 license.

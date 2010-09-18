@@ -19,7 +19,7 @@
 =end
 
 begin
-  require 'lib/gelendra'
+  require 'gelendra'
 rescue LoadError
   require 'rubygems'
   require 'gelendra'

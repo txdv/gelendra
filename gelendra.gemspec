@@ -14,7 +14,9 @@ Gem::Specification.new do |spec|
   spec.executables        = ['gelendra']
   spec.default_executable = 'gelendra'
 
-  spec.files = Dir['bin/*']
+  spec.files =  Dir['bin/*']
+  spec.files += Dir['lib/*']
+  spec.files += Dir['lib/gelendra/*']
 
   spec.has_rdoc = false
   spec.add_dependency('rubyzip', '>= 0.9.4')
