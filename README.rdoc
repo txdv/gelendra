@@ -85,7 +85,7 @@ The once with "no information" seem mostly to be binary files, I assume these ar
 
 == File positioning
 
-The following 2 are absolutely needed by the server in order to be able to play.
+The following 2 are absolutely needed by the server in order to serve a game.
 * wad -> cstrike
 * bsp -> cstrike/maps
 
@@ -94,8 +94,8 @@ The following 3 are needed if one wants an overview of its map
 * bmp -> cstrike/overviews
 * tga -> cstrike/overviews
 
-The following 4 are optional files for the map in order, only relevant for the player.
-If he hasn't got the skybox tgas, a default one be used, wav and sprites and models will be ommited if not existent
+The following 4 are optional files for the map in order, only relevant for the player, the client.
+If he hasn't got the skybox tga's, a default one be used, wav and sprites and models will be ommited if not existent.
 
 * tga -> cstrike/gfx/env/
 * wav -> cstrike/sounds
@@ -110,6 +110,6 @@ Only informational value.
 
 == License
 
-gelendra is available under the gpl v3 license.
+gelendra is available under the gpl3 license.
 
 Author::   Andrius Bentkus <ToXedVirus@gmail.com>
