@@ -29,11 +29,10 @@ require 'etc'
 # external gem
 require 'zip/zip'
 
-require 'gelendra/stringext'
+require 'gelendra/ext'
 require 'gelendra/bsp'
 
-require 'gelendra/baseinfo'
-require 'gelendra/localinfo'
+require 'gelendra/info'
 
 require 'gelendra/package'
 require 'gelendra/cli'
