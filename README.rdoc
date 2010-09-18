@@ -20,6 +20,59 @@ gelendra create packages src_directory/ dst_directory/
 It will look for all the files in the src_directory, check if there are any clashes (two or more files
 which have the same name but are different), inform you and terminate if there are, go on creating packages.
 
+== Information
+
+=== File endings
+
+Since this tool works a lot with files and different file formats and I had to gather a lot of information
+about them, I want to commit this information in here.
+
+If one wants to collect all files for a map you have to read the file.
+The entity section is the most interesting, since everything you need is basically represented in text.
+
+Files which are of interested:
+
+* .bsp - the map file, which contains most of the information, resides in maps/
+* .wad - a collection of textures needed by bsp files, resides in the root game dir
+* .txt - a description of the map usually provided by the author, resides in maps/
+* .bmp - overview of a map, resides in overviews/<mapname>/
+* .txt - overview setup, sets the bmp straight, resides in the overviews directory too
+* .spr - sprites, used by maps if they have custom textures
+* .tga - sky definition files
+* .wav - sounds played by maps
+
+Other files which occure a lot of times with maps and have no meaning when packaging.
+
+* .nav - navigation file for bots generated when playing with bots
+* .dem - demo files
+* .ztmp - created by the server when transfering maps
+* .ent - extracted entity files of the map
+* .res - a list of files belonging to a map (good idea), not including the wad
+* .bak - backup files of normal files
+* .rar - archive system
+* .zip - archive system
+* .bz2 - archive system, used by the source engine when sending files
+* .wpt - waypoints
+* .pwf - pot bod way points, resides in PODBot/WPTDefault
+* .pxp - pot bod way points, resides in PODBot/WPTDefault
+* .rbl - bot waypoints, instructions
+* .ling - coordinates
+* .p0 - coordinates
+* .p1 - coordinates
+* .p2 - coordinates
+* .p3 - coordinates
+* .prt - coordinates
+* .pts - coordinates
+* .rw1 - no information (1)
+* .rw2 - no information (1)
+* .swat - no information
+* .agro - no information
+* .csb - no information
+* .awp - no information
+* .nwp - no information
+
+The coordinates have all the time 3 sets of floats in text format, don't know what they stay for.
+The once with no information seem mostly to be binary files, I assume these are coordinates for bots or something similar.
 == License
 
 gelendra is available under the gpl v3 license.
