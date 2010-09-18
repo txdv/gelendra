@@ -4,7 +4,7 @@ gelendra is a map management tool for the goldsrc (Half-Life, CounterStrike, etc
 Furthermore it supports zip management (install zip archives as packages, and unistall them)
 
 gelendra has the following features.
- * package creation maps using unordered files in a directory. Creates zip packages for all bsp files with all needed dependencies.
+ * package creation maps using unordered files in a directory. Creates zip packages for all bsp files with all needed dependencies
  * package management - installing/removing/listing available and installed once
  * package checking, if a map package has all needed files
 
@@ -27,8 +27,9 @@ which have the same name but are different), inform you and terminate if there a
 Since this tool works a lot with files and different file formats and I had to gather a lot of information
 about them, I want to commit this information in here.
 
-If one wants to collect all files for a map you have to read the file.
-The entity section is the most interesting, since everything you need is basically represented in text.
+If one wants to collect all files for a map you have basically to read the bsp file.
+The entity section in the bsp file is the most interesting one, since everything you need is basically represented in text there.
+Though you need the wad files to check if all textures are really present, a lot of bsp files reference wad files which are actually not even needed, since the other wads referenced basically provide all the textures you need.
 
 Files which are of interested:
 
@@ -71,8 +72,10 @@ Other files which occure a lot of times with maps and have no meaning when packa
 * .awp - no information
 * .nwp - no information
 
-The coordinates have all the time 3 sets of floats in text format, don't know what they stay for.
-The once with no information seem mostly to be binary files, I assume these are coordinates for bots or something similar.
+The coordinates have all the time 3 sets of floats in text format, don't know what they stand for, probably some random output for tools used by the developers or maybe bot way points?
+
+The once with "no information" seem mostly to be binary files, I assume these are coordinates for bots or something similar.
+
 == License
 
 gelendra is available under the gpl v3 license.

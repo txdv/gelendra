@@ -16,7 +16,26 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 =end
 
-require 'gelendra/ext'
+# Functionality:
+# TODO: Check if the files in the archives are all in small letters
+# TODO: Add a function to downcase all files in a archive file
+# TODO: Support different archives, create OOP archive control
+# TODO: Add function which copies all files logged in database to another directory
+# TODO: Add database file softlinking
+# TODO: Add package checking (read entities!) (check if this feature is complete)
+# TODO: Add a package creator: you select a dir with files, it finds all bspmaps and
+#       creates a lot of packages into a destination dir (only complete ofcourse)
+#       REMAKR: this is done, but we need to check now for double occurences of files
+#       and a lot of bsp's rise exceptions, I have to check this out
+
+# CliInvoker:
+# TODO: Adjust CliInvoker to better work (let single command lines work)
+# TODO: Add command line function help definition support in CliInvoker
+
+# Misc:
+# TODO: Add independent game architecture (list maps of other games, pick only public files)
+# TODO: Manage occurences in different archives (ALLOW THEM! if files are equal)
+
 
 class CliInvoker
   public
@@ -308,8 +327,14 @@ class Cli
     end
   end
 
+  VALID_EXT = [ ".bsp", ".txt", "tga", "mdl", "wad" ]
   def create_packages(src, dst)
     mapping = Dir.find_all_files(src).create_filemap
+
+    #mapping = Dir.find_all_files(src).reject { |file| VALID_EXT.include?(file.extname) }.create_filemap
+
+    p mapping
+
     
     @overviews = []
 
