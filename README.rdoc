@@ -33,14 +33,18 @@ Though you need the wad files to check if all textures are really present, a lot
 
 Files which are of interested:
 
-* .bsp - the map file, which contains most of the information, resides in maps/
-* .wad - a collection of textures needed by bsp files, resides in the root game dir
-* .txt - a description of the map usually provided by the author, resides in maps/
 * .bmp - overview of a map, resides in overviews/<mapname>/
 * .txt - overview setup, sets the bmp straight, resides in the overviews directory too
+* .bsp - the map file, which contains most of the information, resides in maps/
+* .mdl - model file
 * .spr - sprites, used by maps if they have custom textures
 * .tga - sky definition files
+* .wad - a collection of textures needed by bsp files, resides in the root game dir
 * .wav - sounds played by maps
+* .txt - a description of the map usually provided by the author, resides in maps/
+
+Note that the file extension txt is used for map overviews and for map description created by the authors.
+The overview setup txt file is easy to recognize by looking inside the text, it must have the keywords "global", "ZOOM", "ORIGIN", "ROTATED", "layer", "IMAGE", "HEIGHT".
 
 Other files which occure a lot of times with maps and have no meaning when packaging.
 
@@ -71,6 +75,8 @@ Other files which occure a lot of times with maps and have no meaning when packa
 * .csb - no information
 * .awp - no information
 * .nwp - no information
+
+I have to admit that waypoints might be interesting, but they are not needed by most of the bots, they will be generated automatically.
 
 The coordinates have all the time 3 sets of floats in text format, don't know what they stand for, probably some random output for tools used by the developers or maybe bot way points?
 

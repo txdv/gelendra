@@ -25,7 +25,7 @@
 # TODO: Add package checking (read entities!) (check if this feature is complete)
 # TODO: Add a package creator: you select a dir with files, it finds all bspmaps and
 #       creates a lot of packages into a destination dir (only complete ofcourse)
-#       REMAKR: this is done, but we need to check now for double occurences of files
+#       REMARK: this is done, but we need to check now for double occurences of files
 #       and a lot of bsp's rise exceptions, I have to check this out
 
 # CliInvoker:
@@ -327,14 +327,11 @@ class Cli
     end
   end
 
-  VALID_EXT = [ ".bsp", ".txt", "tga", "mdl", "wad" ]
+  # valid extensions for maps
+  VALID_EXT = [".bmp", ".bsp", ".mdl", ".spr", ".tga", ".txt", ".wad", ".wav"]
   def create_packages(src, dst)
-    mapping = Dir.find_all_files(src).create_filemap
 
-    #mapping = Dir.find_all_files(src).reject { |file| VALID_EXT.include?(file.extname) }.create_filemap
-
-    p mapping
-
+    mapping = Dir.find_all_files(src).reject { |file| !VALID_EXT.include?(file.extname) }.create_filemap
     
     @overviews = []
 
