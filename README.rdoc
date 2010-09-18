@@ -1,0 +1,15 @@
+= gelendra -- ruby management tool
+
+gelendra is a map management tool for the goldsrc (Half-Life, CounterStrike, etc.) map files.
+Furthermore it supports zip management (install zip archives as packages, and unistall them)
+
+gelendra has the following features.
+ * package creation maps using unordered files in a directory. Creates zip packages for all bsp files with all needed dependencies.
+ * package management - installing/removing/listing available and installed once
+ * package checking, if a map package has all needed files
+
+== License
+
+gelendra is available under the gpl v3 license.
+
+Author::   Andrius Bentkus <ToXedVirus@gmail.com>
