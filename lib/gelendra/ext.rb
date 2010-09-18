@@ -38,3 +38,47 @@ class String
 
 end
 
+class Dir
+  def self.find_all_files(directory)
+    files = Dir[directory + "*"]
+    files.each do |fname|
+      files += find_all_files(fname + "/") if (File.directory?(fname))
+    end
+    return files.reject { |f| File.directory?(f) }
+  end
+end
+
+class Array
+  def create_filemap
+    map = {}
+    self.each { |file| map[file.basename] = file }
+    return map
+  end
+
+  def basename
+    self.collect { |f| f.basename }
+  end
+end
+
+class Hash
+  def initialize(filelist)
+    filelist.each do |file| 
+      name = file.basename
+      if self.has_key?(name)
+        self[file.basename].push file
+      else
+        self[file.basename] = [file]
+      end
+    end
+  end
+
+  def clashes
+    self.each do |file, files|
+      yield(files) if files.size > 1
+    end
+  end
+
+  def find_missing_files(files)
+    files.basename.reject { |file| self.has_key?(file) }
+  end
+end

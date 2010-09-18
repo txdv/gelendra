@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 =end
 
+require 'gelendra/ext'
+
 class CliInvoker
   public
   def initialize(klass)
@@ -241,7 +243,8 @@ class Cli
   def package_create(bspfile, src, dst)
     
     puts "Checking files for #{bspfile} ..."
-    mapping = basename_map(all_files_in_dir(src))
+    #mapping = basename_map(all_files_in_dir(src))
+    mapping = Dir.find_all_files(src).create_filemap
     mapping_package_create(mapping, bspfile)
   end
 
@@ -255,44 +258,48 @@ class Cli
 
     # get rid of files that are allaready packaged
     mapfiles.reject! { |file| @baseinfo.include?(file) }
-    mapfiles.collect! { |file| file.gsub(/^\//, "") } # if a file has a leading /, delete it, yeah I have a bsp file
+
+    # if a file has a leading /, delete it, yeah I have a bsp file
     # which is compiled with shit like that
+    mapfiles.collect! { |file| file.gsub(/^\//, "") }
     
-    t = resolve_textures(resolve_wads(mapping, mapwads), maptextures)
-    missing_textures = maptextures - found_textures(t)
-    missing_files = mapfiles.collect { |file| file.basename }.reject { |file| mapping.has_key?(file) }
+    wad_texture_map = resolve_textures(resolve_wads(mapping, mapwads), maptextures)
+    
+    found_textures = wad_texture_map.values.flatten.uniq
+    found_textures.delete nil
+
+    missing_textures = maptextures - found_textures
+    missing_files = mapping.find_missing_files(mapfiles)
 
     ret = { :wadfiles => {}, :files => {}, :errors => {}, :bspfile => bspfile }
 
-    # get all files which are EXITENT and have needed textures
+    # get all files which EXIT and have some of the needed textures
     # leave the empty wad references alone
-    (t.reject { |k,v| v.nil? }.reject { |k,v| v.empty? }.collect { |k,v| k } - @baseinfo.default_wads).each do |f|
+    (wad_texture_map.reject { |k,v| v.nil? or v.empty? }.keys - @baseinfo.default_wads).each do |f|
       ret[:wadfiles][f] = mapping[f]
     end
 
-    if missing_textures.empty? and missing_files.empty?
-      mapfiles.each do |file|
-        ret[:files][file] = mapping[file.basename]
-        #puts "#{file} => #{mapping[file.basename]}"
-      end
-    else
-      if !missing_textures.empty?
-        # some textures are missing, and we cant find them, suggest some
-        #not_found_wads = t.reject { |k,v| !v.nil? }.collect { |k,v| k }
-        ret[:errors][:missing_textures] = missing_textures
-        #puts "Missing textures: #{missing_textures.join(", ")}"
-        #puts "Maybe in wads: #{not_found_wads.join(", ")}"
-      end
-      if !missing_files.empty?
-        ret[:errors][:missing_files] = missing_files
-        #puts "Missing files: #{missing_files.join(", ")}"
-      end
+    mapfiles.each do |file|
+      ret[:files][file] = mapping[file.basename]
     end
+
+    if !missing_textures.empty?
+      # some textures are missing, and we cant find them, suggest some
+      ret[:errors][:missing_wads] = wad_texture_map.reject { |k,v| !v.nil? }.collect { |k,v| k }
+      ret[:errors][:missing_textures] = missing_textures
+    end
+
+    if !missing_files.empty?
+      ret[:errors][:missing_files] = missing_files
+    end
+
     return ret
   end
 
   def create_packages(src, dst)
-    mapping = basename_map(all_files_in_dir(src))
+    mapping = Dir.find_all_files(src).create_filemap
+    #mapping.clashes { |files| p files }
+
     rets = []
     file_count = 0
     error_count = 0
@@ -315,8 +322,7 @@ class Cli
         puts "Some error occured: #{error}"
       end
     end
-    puts "#{file_count - error_count} of #{file_count} bsp files can be used"
-    #p rets
+    puts "#{file_count - error_count} of #{file_count} bsp files can be packaged"
     rets.each do |package|
       if package[:errors].empty? then
         create_zip_package(package, dst)
@@ -331,9 +337,9 @@ class Cli
     fullname = dst + name
     puts "Creating #{fullname}"
     Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
-
       src = pkg[:bspfile]
       dst = "maps/" + src.basename
+
       if zip.find_entry(dst).nil?
         zip.add(dst, src)
       end
@@ -343,17 +349,20 @@ class Cli
           zip.add(dst, src)
         end
       end
+
       pkg[:wadfiles].each do |dst,src|
         if zip.find_entry(dst).nil?
           zip.add(dst, src)
         end
       end
     end
+
     rescue => error
+
     p error
     p pkg
-    end
 
+    end
   end
 
   def create_package(bla)
@@ -362,31 +371,16 @@ class Cli
 
   private
 
-  # gets a hash of (map => [textures]) and returns all textures
+  # gets a hash of (wads => [textures]) and returns all textures
   def found_textures(map_texture_mapping)
-    ret = map_texture_mapping.collect { |k, v| v }.flatten.uniq
+    #ret = map_texture_mapping.collect { |k, v| v }.flatten.uniq
+    ret = map_texture_mapping.values.flatten.uniq
     ret.delete nil
     return ret
   end
 
-  # returns all files in a directory
-  def all_files_in_dir(directory)
-    files = Dir[directory + "*"]
-    files.each do |fname|
-      files += all_files_in_dir(fname + "/") if (File.directory?(fname))
-    end
-    return files.reject { |f| File.directory?(f) }
-  end
-
-  # gets an array of filenames and returns a hash { basename(filename) => file }
-  def basename_map(files)
-    map = {}
-    files.each { |file| map[file.basename] = file }
-    return map
-  end
-  
-  # gets a filemapping returned by basename_map
-  # and a list of wads
+  # a filemapping
+  # a list of wads
   # returns a hash of wads => textures(wads)
   def resolve_wads(mapping, wads)
     wadmap = {}
@@ -401,7 +395,7 @@ class Cli
     end
     return wadmap
   end
-
+  # wad => textures mapping
   def resolve_textures(wads, map_textures)
     resolved_textures = {}
     i = map_textures
