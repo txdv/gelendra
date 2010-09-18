@@ -296,6 +296,18 @@ class Cli
     return ret
   end
 
+  def unclash(files)
+    i = 0
+    while i < files.size
+      j = i+1
+      while j < files.size
+        files.delete(files[j]) if File.compare(files[i], files[j])
+        j += 1
+      end
+      i += 1
+    end
+  end
+
   def create_packages(src, dst)
     mapping = Dir.find_all_files(src).create_filemap
     
@@ -309,8 +321,11 @@ class Cli
         if files.size == 1
           mapping[basename] = files.first
         else
-          puts "#{files.inspect} clash, remove some"
-          mapping.delete(basename)
+          unclash(files)
+          if files.size != 1
+            puts "#{files.inspect} clash, remove some"
+            mapping.delete(basename)
+          end
         end
       end
     end
