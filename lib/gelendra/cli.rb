@@ -36,22 +36,24 @@ class CliInvoker
       
       if (methods.size == 1)
         funcname = name.join("_")
-        arguments = ARGV[x+1..9999].join(" ")
+        arguments = ARGV[x+1..ARGV.size].join('", "')
 
         if arguments.size == 0
           evalstr = "@klass.#{funcname}"
-      
-        else
+        elsif arguments.size == 1
           evalstr = "@klass.#{funcname}(#{arguments.inspect})"
+        else
+          evalstr = "@klass.#{funcname}(\"#{arguments}\")"
         end
-        # puts evalstr
-        # puts
+        #puts arguments
+        #puts evalstr
+        #puts
         eval(evalstr)
         return
       end
       x += 1
     end
-    puts "gelendra: did not understand you, maybe you want need some help? gelendra help"
+    puts "gelendra: did not understand you, maybe you need some help? type gelendra help"
   end
 
   private 
@@ -220,6 +222,7 @@ class Cli
     end
   end
 
+=begin
   def softlink_base(basedir, pattern = "*")
     # TODO: rewrite localinfo
     puts pattern
@@ -231,6 +234,189 @@ class Cli
   def softlink_rebase
 
   end
+=end
+
+
+  # TODO: manage double occurences of files
+  def package_create(bspfile, src, dst)
+    
+    puts "Checking files for #{bspfile} ..."
+    mapping = basename_map(all_files_in_dir(src))
+    mapping_package_create(mapping, bspfile)
+  end
+
+  def mapping_package_create(mapping, bspfile)
+
+    fd = File.open(bspfile)
+    mapwads, mapfiles, maptextures = BSP.get_info(fd)
+    # mapwads in maps can have prefixes
+    mapwads = mapwads.collect { |mapwad| mapwad.basename }
+    fd.close
+
+    # get rid of files that are allaready packaged
+    mapfiles.reject! { |file| @baseinfo.include?(file) }
+    mapfiles.collect! { |file| file.gsub(/^\//, "") } # if a file has a leading /, delete it, yeah I have a bsp file
+    # which is compiled with shit like that
+    
+    t = resolve_textures(resolve_wads(mapping, mapwads), maptextures)
+    missing_textures = maptextures - found_textures(t)
+    missing_files = mapfiles.collect { |file| file.basename }.reject { |file| mapping.has_key?(file) }
+
+    ret = { :wadfiles => {}, :files => {}, :errors => {}, :bspfile => bspfile }
+
+    # get all files which are EXITENT and have needed textures
+    # leave the empty wad references alone
+    (t.reject { |k,v| v.nil? }.reject { |k,v| v.empty? }.collect { |k,v| k } - @baseinfo.default_wads).each do |f|
+      ret[:wadfiles][f] = mapping[f]
+    end
+
+    if missing_textures.empty? and missing_files.empty?
+      mapfiles.each do |file|
+        ret[:files][file] = mapping[file.basename]
+        #puts "#{file} => #{mapping[file.basename]}"
+      end
+    else
+      if !missing_textures.empty?
+        # some textures are missing, and we cant find them, suggest some
+        #not_found_wads = t.reject { |k,v| !v.nil? }.collect { |k,v| k }
+        ret[:errors][:missing_textures] = missing_textures
+        #puts "Missing textures: #{missing_textures.join(", ")}"
+        #puts "Maybe in wads: #{not_found_wads.join(", ")}"
+      end
+      if !missing_files.empty?
+        ret[:errors][:missing_files] = missing_files
+        #puts "Missing files: #{missing_files.join(", ")}"
+      end
+    end
+    return ret
+  end
+
+  def create_packages(src, dst)
+    mapping = basename_map(all_files_in_dir(src))
+    rets = []
+    file_count = 0
+    error_count = 0
+    mapping.each do |file, fullname|
+      begin
+      if file.extname == ".bsp"
+        print "Checking #{file} ... "
+        rets.push mapping_package_create(mapping, fullname)
+        file_count += 1
+
+        if !rets.last[:errors].empty?
+          error_count += 1
+          puts "invalid"
+        else
+          puts "valid"
+        end
+
+      end
+      rescue => error
+        puts "Some error occured: #{error}"
+      end
+    end
+    puts "#{file_count - error_count} of #{file_count} bsp files can be used"
+    #p rets
+    rets.each do |package|
+      if package[:errors].empty? then
+        create_zip_package(package, dst)
+      end
+    end
+  end
+  
+  # gets a hash with correct file entries and creates a zip file
+  def create_zip_package(pkg, dst)
+    begin
+    name = pkg[:bspfile].base + ".zip"
+    fullname = dst + name
+    puts "Creating #{fullname}"
+    Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
+
+      src = pkg[:bspfile]
+      dst = "maps/" + src.basename
+      if zip.find_entry(dst).nil?
+        zip.add(dst, src)
+      end
+
+      pkg[:files].each do |dst,src|
+        if zip.find_entry(dst).nil?
+          zip.add(dst, src)
+        end
+      end
+      pkg[:wadfiles].each do |dst,src|
+        if zip.find_entry(dst).nil?
+          zip.add(dst, src)
+        end
+      end
+    end
+    rescue => error
+    p error
+    p pkg
+    end
+
+  end
+
+  def create_package(bla)
+
+  end
+
+  private
+
+  # gets a hash of (map => [textures]) and returns all textures
+  def found_textures(map_texture_mapping)
+    ret = map_texture_mapping.collect { |k, v| v }.flatten.uniq
+    ret.delete nil
+    return ret
+  end
+
+  # returns all files in a directory
+  def all_files_in_dir(directory)
+    files = Dir[directory + "*"]
+    files.each do |fname|
+      files += all_files_in_dir(fname + "/") if (File.directory?(fname))
+    end
+    return files.reject { |f| File.directory?(f) }
+  end
+
+  # gets an array of filenames and returns a hash { basename(filename) => file }
+  def basename_map(files)
+    map = {}
+    files.each { |file| map[file.basename] = file }
+    return map
+  end
+  
+  # gets a filemapping returned by basename_map
+  # and a list of wads
+  # returns a hash of wads => textures(wads)
+  def resolve_wads(mapping, wads)
+    wadmap = {}
+    wads.each do |wad|
+      if (@baseinfo.wads.has_key?(wad))
+        wadmap[wad] = @baseinfo.wads[wad]
+      elsif (mapping.has_key?(wad))
+        File.open(mapping[wad]) { |fd| wadmap[wad] = WAD.get_entries(fd) }
+      else
+        wadmap[wad] = nil
+      end
+    end
+    return wadmap
+  end
+
+  def resolve_textures(wads, map_textures)
+    resolved_textures = {}
+    i = map_textures
+    wads.each do |wad, wad_textures|
+      if (wad_textures.nil?)
+        resolved_textures[wad] = nil
+      else
+        found = map_textures - (map_textures - wad_textures)
+        resolved_textures[wad] = found
+      end
+    end
+    return resolved_textures
+  end
+
+  public
 
   def help
     puts <<HELPSTRING
@@ -248,38 +434,36 @@ under certain conditions; read the file 'LICENSE' for further details
   basedir list
     lists all added basedirs
 
-  package install <package>
-    extracts package in the current directory and puts all the data to the local database
+  package install <pattern|package>
+    extracts a package in the current directory and puts all the data to the local database
+    or all packages matching the pattern
 
-  package remove <package>
-    removes the extracted package files
+  package remove <pattern|package>
+    removes the extracted package files, or all packages matching the pattern
 
   package list <pattern>
-    lists all locally installed packages using the pattern, if not pattern provided, all are listed
+    lists all locally installed packages using the pattern, if no pattern provided, all packages are listed
 
   package available <pattern>
     lists all available packages using the pattern, if no pattern provided, all are listed
 
-  zip check
-    checks if all installed files are in the zip file specified in database
-
-  zip rebase
-    adds missing files to the zip file specified in database
+  list allmaps
+    lists all installed maps
 
   list availablepackages
     lists all available packages in basedirectories
 
-  list installedpackages
-    lists locally installed packages
-  
-  list allmaps
-    lists all installed maps
+  list basemaps
+    lists maps that were installed without gelendra
 
   list installedmaps
     lists all maps that were installed using gelendra
 
-  list basemaps
-    lists maps that were installed without gelendra
+  list installedpackages
+    lists locally installed packages
+  
+  list packages <pattern>
+    lists all locally installed packages using the pattern, if not pattern provided, all are listed
 
   database check
     checks the local database for any errors (occuring directories, missing files)
@@ -288,6 +472,12 @@ under certain conditions; read the file 'LICENSE' for further details
     removes occuring directories from database
     removes files which are missing in database
     removes database entries of files which are not present
+
+  zip check
+    checks if all installed files are in the zip file specified in database
+
+  zip rebase
+    adds missing files to the zip file specified in database
 
   help
     prints this help
