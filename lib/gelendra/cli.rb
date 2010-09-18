@@ -27,6 +27,7 @@
 #       creates a lot of packages into a destination dir (only complete ofcourse)
 #       REMARK: this is done, but we need to check now for double occurences of files
 #       and a lot of bsp's rise exceptions, I have to check this out
+# TODO: Add clver clash resolver
 
 # CliInvoker:
 # TODO: Adjust CliInvoker to better work (let single command lines work)

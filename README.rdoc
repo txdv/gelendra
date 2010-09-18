@@ -34,6 +34,7 @@ Though you need the wad files to check if all textures are really present, a lot
 Files which are of interested:
 
 * .bmp - overview of a map, resides in overviews/<mapname>/
+* .tga - overview of a map, resides in overviews/<mapname>/ (very rare)
 * .txt - overview setup, sets the bmp straight, resides in the overviews directory too
 * .bsp - the map file, which contains most of the information, resides in maps/
 * .mdl - model file
@@ -81,6 +82,31 @@ I have to admit that waypoints might be interesting, but they are not needed by 
 The coordinates have all the time 3 sets of floats in text format, don't know what they stand for, probably some random output for tools used by the developers or maybe bot way points?
 
 The once with "no information" seem mostly to be binary files, I assume these are coordinates for bots or something similar.
+
+== File positioning
+
+The following 2 are absolutely needed by the server in order to be able to play.
+* wad -> cstrike
+* bsp -> cstrike/maps
+
+The following 3 are needed if one wants an overview of its map
+* txt -> cstrike/overviews
+* bmp -> cstrike/overviews
+* tga -> cstrike/overviews
+
+The following 4 are optional files for the map in order, only relevant for the player.
+If he hasn't got the skybox tgas, a default one be used, wav and sprites and models will be ommited if not existent
+
+* tga -> cstrike/gfx/env/
+* wav -> cstrike/sounds
+* spr -> cstrike/sprites
+* mdl -> cstrike/models
+
+These files have absolutely no relevance, nor to the client nor to the server.
+Only informational value.
+
+* txt -> cstrike/maps
+* res -> cstrike/maps
 
 == License
 
