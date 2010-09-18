@@ -85,6 +85,8 @@ The once with "no information" seem mostly to be binary files, I assume these ar
 
 == File positioning
 
+In the following examples cstrike shall be the mod game directory.
+
 The following 2 are absolutely needed by the server in order to serve a game.
 * wad -> cstrike
 * bsp -> cstrike/maps

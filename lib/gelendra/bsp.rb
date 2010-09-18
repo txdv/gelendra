@@ -146,16 +146,25 @@ class EntityParser
       wads = entities[0]["wad"].split(";").collect { |i| i.split("\\").last }
     end
 
+    entities.shift
+    entities.each do |entity| 
+      if entity.has_key?("message")
+        sound = "sound/" + entity["message"]
+        files.push sound
+      end
+
+    end
+    
     return [wads, files.sort!]
   end
 end
 
 class Overview
+  KEYWORDS = ["global", "ZOOM", "ORIGIN", "ROTATED", "layer", "IMAGE", "HEIGHT"]
   def self.check(file)
-    keywords = ["global", "ZOOM", "ORIGIN", "ROTATED", "layer", "IMAGE", "HEIGHT"]
     File.open(file) do |text|
       text = text.read
-      arr = keywords.collect { |keyword| text.include?(keyword) }.uniq
+      arr = KEYWORDS.collect { |keyword| text.include?(keyword) }.uniq
       return arr.first && arr.size == 1
     end
   end

@@ -465,6 +465,20 @@ class Cli
 
   public
 
+  def bspinfo(file)
+    f = File.open(file)
+    wads, files, textures = BSP.get_info(f)
+    f.close
+    
+    puts "File information for #{file}"
+    puts
+    puts "wads: #{wads.join(", ")}"
+    puts
+    puts "optional files"
+    puts files
+
+  end
+
   def help
     puts <<HELPSTRING
 Copyright (C) 2010 Andrius Bentkus

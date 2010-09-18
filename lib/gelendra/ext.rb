@@ -90,4 +90,5 @@ class Hash
   def find_missing_files(files)
     files.basename.reject { |file| self.has_key?(file) }
   end
+
 end
