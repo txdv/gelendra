@@ -1,7 +1,7 @@
-= gelendra -- ruby management tool
+= gelendra -- ruby goldsrc map management tool
 
 gelendra is a map management tool for the goldsrc (Half-Life, CounterStrike, etc.) map files.
-Furthermore it supports zip management (install zip archives as packages, and unistall them)
+It supports archive management (installing, uninstalling, file tracking of the archives).
 
 gelendra has the following features.
  * package creation maps using unordered files in a directory. Creates zip packages for all bsp files with all needed dependencies
@@ -45,7 +45,11 @@ Files which are of interested:
 * .txt - a description of the map usually provided by the author, resides in maps/
 
 Note that the file extension txt is used for map overviews and for map description created by the authors.
+They file names have to be equale to the basename of the bsp file, for de_dust.bsp that would be de_dust.txt.
 The overview setup txt file is easy to recognize by looking inside the text, it must have the keywords "global", "ZOOM", "ORIGIN", "ROTATED", "layer", "IMAGE", "HEIGHT".
+
+Distinguishing the tga's is easy too, the skymodels has always bk, ft, dn, up , rt, lf before the file ending .tga, for example: dustup.tga, dustbk.tga.
+Furthermore, the overview bmp's, tga's and txt's are named after the filemap, for de_dust.bsp it would be de_dust.tga.
 
 Other files which occure a lot of times with maps and have no meaning when packaging.
 
@@ -86,29 +90,31 @@ The once with "no information" seem mostly to be binary files, I assume these ar
 == File positioning
 
 In the following examples cstrike shall be the mod game directory.
+wad -> cstrike/ means that the files with the ending ".wad" have to go to root mod directory cstrike/
 
-The following 2 are absolutely needed by the server in order to serve a game.
-* wad -> cstrike
-* bsp -> cstrike/maps
+The following 2 are absolutely needed by the server in order to serve a game. These files always go into these directories, no matter what.
+* wad -> cstrike/
+* bsp -> cstrike/maps/
 
 The following 3 are needed if one wants an overview of its map
-* txt -> cstrike/overviews
-* bmp -> cstrike/overviews
-* tga -> cstrike/overviews
+* txt -> cstrike/overviews/
+* bmp -> cstrike/overviews/
+* tga -> cstrike/overviews/
 
 The following 4 are optional files for the map in order, only relevant for the player, the client.
-If he hasn't got the skybox tga's, a default one be used, wav and sprites and models will be ommited if not existent.
+If he hasn't got the skybox tga's, a default one be used, wav and sprites, models will be ommited if not existent.
+All the dependencies are in the entity section in the bsp file.
 
 * tga -> cstrike/gfx/env/
-* wav -> cstrike/sounds
-* spr -> cstrike/sprites
-* mdl -> cstrike/models
+* wav -> cstrike/sounds/
+* spr -> cstrike/sprites/
+* mdl -> cstrike/models/
 
 These files have absolutely no relevance, nor to the client nor to the server.
 Only informational value.
 
-* txt -> cstrike/maps
-* res -> cstrike/maps
+* txt -> cstrike/maps/
+* res -> cstrike/maps/
 
 == License
 

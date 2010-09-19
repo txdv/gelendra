@@ -110,7 +110,7 @@ class WAD
 end
 
 class EntityParser
-  @sky_endings = [ "bk", "ft", "dn", "up" , "rt", "lf" ]
+  SKY_END = [ "bk", "ft", "dn", "up" , "rt", "lf" ]
   def self.parse(text)
     entities = []
     entity = nil
@@ -138,7 +138,7 @@ class EntityParser
     files.delete(nil)
 
     if entities[0].has_key?("skyname")
-      files += @sky_endings.collect { |ending| "gfx/env/" + entities[0]["skyname"] + ending + ".tga" }
+      files += SKY_END.collect { |ending| "gfx/env/" + entities[0]["skyname"] + ending + ".tga" }
     end
 
     wads = []

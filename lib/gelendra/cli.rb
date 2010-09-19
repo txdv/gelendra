@@ -330,9 +330,59 @@ class Cli
 
   # valid extensions for maps
   VALID_EXT = [".bmp", ".bsp", ".mdl", ".spr", ".tga", ".txt", ".wad", ".wav"]
-  def create_packages(src, dst)
 
-    mapping = Dir.find_all_files(src).reject { |file| !VALID_EXT.include?(file.extname) }.create_filemap
+  def info(src)
+
+    filelist = Dir.find_all_files(src).reject { |file| !VALID_EXT.include?(file.extname.downcase) }
+
+    fileclass = {}
+    fileclass[:server] = { :wad => [], :bsp => [] }
+    fileclass[:overview] = { :txt => [], :bmp => [], :tga => [] }
+    fileclass[:optional] = { :tga => [], :wav => [], :spr => [], :mdl => [] }
+    # txt descriptions
+    fileclass[:txt] = []
+
+    filelist.each do |file|
+      case file.extname.downcase
+      when ".bsp"
+        fileclass[:server][:bsp].push file
+      when ".wad"
+        fileclass[:server][:wad].push file
+      when ".tga"
+        if file.has_sky_ending
+          fileclass[:optional][:tga].push file
+        else
+          fileclass[:overview][:tga].push file
+        end
+      when ".txt"
+        if Overview.check(file)
+          fileclass[:overview][:txt].push file
+        else
+          fileclass[:txt].push file
+        end
+      when ",mdl"
+        fileclass[:optional][:mdl].push file
+      when ".spr"
+        fileclass[:optional][:spr].push file
+      when ".wav"
+        fileclass[:optional][:wav].push file
+      end
+    end
+
+    basenames = fileclass[:server][:bsp].collect { |f| f.base }
+
+    fileclass[:overview][:tga].reject! { |f| !basenames.include?(f.base) }
+    fileclass[:overview][:bmp].reject! { |f| !basenames.include?(f.base) }
+    fileclass[:overview][:txt].reject! { |f| !basenames.include?(f.base) }
+
+    p fileclass
+
+
+    return
+  end
+
+  def create_packages(src, dst)
+    mapping = Dir.find_all_files(src).reject { |file| !VALID_EXT.include?(file.extname.downcase) }.create_filemap
     
     @overviews = []
 

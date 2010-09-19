@@ -32,9 +32,38 @@ class String
     return File.basename(self, self.extname)
   end
 
-  def extname
-    return File.extname(self)
+  def extname(*args)
+    if args.size == 0
+      return File.extname(self)
+    elsif args.size == 1
+      return args.first == self.extname
+    end
   end
+
+  def method_missing(name, *args)
+    name = name.to_s.split("_")
+    case name.shift
+    when "is"
+      return extname("." + name.first) if args.size == 0
+    when "infix"
+      return self.split(name.join("/") + "/")[0] != self
+    when "preinfix"
+      return self.split(name.join("/") + "/").first
+    end
+    raise "method missing"
+  end
+  
+  def starts_with(prefix)
+    return self[/^#{prefix}/] 
+  end
+
+ def ends_with(postfix)
+   self[/#{postfix}$/] 
+ end
+
+ def has_sky_ending
+   EntityParser::SKY_END.collect { |i| i + ".tga" }.collect { |i| self[/#{i}$/] == i }.uniq.size == 2
+ end
 
 end
 
