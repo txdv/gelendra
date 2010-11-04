@@ -331,7 +331,7 @@ class Cli
   # valid extensions for maps
   VALID_EXT = [".bmp", ".bsp", ".mdl", ".spr", ".tga", ".txt", ".wad", ".wav"]
 
-  def info(src)
+  def get_fileclass(src)
 
     filelist = Dir.find_all_files(src).reject { |file| !VALID_EXT.include?(file.extname.downcase) }
 
@@ -360,7 +360,9 @@ class Cli
         else
           fileclass[:txt].push file
         end
-      when ",mdl"
+      when ".bmp"
+        fileclass[:overview][:bmp].push file
+      when ".mdl"
         fileclass[:optional][:mdl].push file
       when ".spr"
         fileclass[:optional][:spr].push file
@@ -374,11 +376,9 @@ class Cli
     fileclass[:overview][:tga].reject! { |f| !basenames.include?(f.base) }
     fileclass[:overview][:bmp].reject! { |f| !basenames.include?(f.base) }
     fileclass[:overview][:txt].reject! { |f| !basenames.include?(f.base) }
+    fileclass[:txt].reject! { |f| !basenames.include?(f.base) }
 
-    p fileclass
-
-
-    return
+    return fileclass
   end
 
   def create_packages(src, dst)
