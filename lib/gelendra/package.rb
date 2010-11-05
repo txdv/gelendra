@@ -346,7 +346,7 @@ class PackageFileList < Array
       create_zip_add(zip, mapfile, bsp, &block)
 
       deps.sort.each do |filename, file|
-        create_zip_add(zip, filename, file, &block)
+        create_zip_add(zip, filename, resolve_file_conflicts(bsp, file), &block)
       end
 
       texts.values.uniq.each do |wad|
@@ -359,10 +359,10 @@ class PackageFileList < Array
 
   def resolve_readme(bsp)
     txt_files = @file_map[File.extchange(bsp.basename, "txt")]
-    return nil if txt_files.nil?
+    return [] if txt_files.nil?
     
     # we don't want no overview files
-    txt_files.reject! { |file| !file.is_a?(PackageTxtFile) }
+    txt_files.reject! { |file| !file.is_a?(PackageTxtFile) } || []
 
   end
 
@@ -375,7 +375,8 @@ class PackageFileList < Array
 
     resolved = {}
     unresolved.each do |file|
-      resolved[file] = resolve_file_conflicts(bsp, get_candidates(file))
+      resolved[file] = nil if resolved[file].nil?
+      resolved[file] = @file_map[File.basename(file)]
     end
 
     return resolved
@@ -407,6 +408,9 @@ class PackageFileList < Array
     return resolved
   end
 
+  def bsp_files
+    reject { |file| !file.is_a?(PackageBspFile) }
+  end
 end
 
 class PackageFile

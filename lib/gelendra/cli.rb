@@ -620,6 +620,11 @@ HELPSTRING
 
 end
 
+class Dir
+  def self.dir(file)
+    file.gsub(Regexp.new(File.basename(file) + "$"), "")
+  end
+end
 class Cli2
 
   def initialize(baseinfo, localinfo)
@@ -658,8 +663,45 @@ class Cli2
     end
   end
 
-  def create_dummy
+  def create_root(src, dst)
+    file_list = Dir.find_all_files(src)
+    fl = PackageFileList.new(file_list)
+    @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
+    @baseinfo.wads.each { |wad, textures| fl.add_wad(wad, textures) }
+
+    fl.bsp_files.each { |bsp| create_root_process_file(dst, fl, bsp) }
   end
+
+  private
+
+  def create_root_prefix(dst, file)
+    dirname = "v1"
+    i = 2
+    filename = File.join(dst, dirname, file)
+    while File.exists?(filename)
+      dirname = "v#{i}"
+      i += 1
+    end
+    dirname = Dir.dir(filename)
+    %x{mkdir -p "#{dirname}"} if !File.exists?(dirname)
+    return filename
+  end
+
+  def create_root_process_file(dst, fl, bsp)
+    deps = fl.resolve_dependencies(bsp)
+    texts = fl.resolve_textures(bsp)
+
+    return false if texts.has_value?(nil)
+    return false if deps.has_value?(nil)
+
+    deps.each do |filename, filearr|
+      filearr.each do |file|
+        File.copy(file.src, create_root_prefix(dst, filename))
+      end
+    end
+
+  end
+  public
 
   def help
     puts <<HELPSTRING
@@ -670,6 +712,9 @@ under certain conditions; read the file 'LICENSE' for further details
 
   create packages <source dir> <destination dir>
     searches in the source dir for all possible files, creates self contained zip packages for every map file.
+
+  create root <source dir> <destination dir>
+    creates a file index of unique files with different subversion directories.
 HELPSTRING
   end
     
