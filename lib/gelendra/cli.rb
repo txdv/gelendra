@@ -667,6 +667,9 @@ Copyright (C) 2010 Andrius Bentkus
 This program comes with ABSOLUTELY NO WARRANTY; 
 This is free software, and you are welcome to redistribute it
 under certain conditions; read the file 'LICENSE' for further details
+
+  create packages <source dir> <destination dir>
+    searches in the source dir for all possible files, creates self contained zip packages for every map file.
 HELPSTRING
   end
     
