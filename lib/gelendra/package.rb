@@ -376,8 +376,7 @@ class PackageFile
     File.basename(@src)
   end
 
-  def create_zip(dst, zipname, &block)
-    fullname = File.join(dst, zipname)
+  def create_zip(fullname, &block)
 
     block.call(src) if !block.nil?
 
@@ -414,7 +413,7 @@ end
 
 class PackageBspFile < PackageFile
   
-  attr_reader :wads, :files, :textures
+  attr_reader :wads, :files, :textures, :texture_dep
 
   def initialize(src)
     super src
@@ -422,6 +421,7 @@ class PackageBspFile < PackageFile
 
     @new_files = @files.reject { |file| PackageFile.basefile?(file) }
     @file_dep += @new_files
+    @texture_dep = {}
   end
 
   def resolved?

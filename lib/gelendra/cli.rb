@@ -638,9 +638,10 @@ class Cli2
         fl.resolve_dependencies file
         if file.resolved?
           zipname = File.extchange(file.basename, "zip")
-          puts "creating #{File.join(dst, zipname)}"
+          fullname = File.join(dst, zipname)
+          puts "creating #{fullname}"
           puts
-          file.create_zip(dst, zipname) { |src| puts "  adding #{src}" }
+          file.create_zip(fullname) { |src| puts "  adding #{src}" }
           puts
         end
       end
