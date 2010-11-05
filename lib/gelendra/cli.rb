@@ -37,6 +37,14 @@
 # TODO: Add independent game architecture (list maps of other games, pick only public files)
 # TODO: Manage occurences in different archives (ALLOW THEM! if files are equal)
 
+class File
+  def self.extchange(filename, ext)
+    tmp = filename.split(".")
+    tmp.pop
+    tmp.push ext
+    tmp.join(".")
+  end
+end
 
 class CliInvoker
   public
@@ -382,8 +390,6 @@ class Cli
   end
 
   def create_packages(src, dst)
-    mapping = Dir.find_all_files(src).reject { |file| !VALID_EXT.include?(file.extname.downcase) }.create_filemap
-    
     @overviews = []
 
     mapping.each do |basename, files|
@@ -614,3 +620,43 @@ HELPSTRING
 
 end
 
+class Cli2
+
+  def initialize(baseinfo, localinfo)
+    @baseinfo = baseinfo
+    @localinfo = localinfo
+    @pm = PackageManager.new(localinfo)
+    # @localinfo = localinfo
+    #@manager = manager
+  end
+
+  def create_packages(src, dst)
+    file_list = Dir.find_all_files(src)
+    fl = PackageFileList.new(file_list)
+    fl.each do |file|
+      if file.is_a?(PackageBspFile)
+        fl.resolve_dependencies file
+        if file.resolved?
+          zipname = File.extchange(file.basename, "zip")
+          puts "creating #{File.join(dst, zipname)}"
+          puts
+          file.create_zip(dst, zipname) { |src| puts "  adding #{src}" }
+          puts
+        end
+      end
+    end
+  end
+
+  def create_dummy
+  end
+
+  def help
+    puts <<HELPSTRING
+Copyright (C) 2010 Andrius Bentkus
+This program comes with ABSOLUTELY NO WARRANTY; 
+This is free software, and you are welcome to redistribute it
+under certain conditions; read the file 'LICENSE' for further details
+HELPSTRING
+  end
+    
+end

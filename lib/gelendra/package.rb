@@ -16,7 +16,18 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 =end
 
+require 'digest/sha1'
+require 'extensions/string'
+
+
+class Zip::ZipEntry
+  def sha1
+    get_input_stream { |f| return Digest::SHA1.hexdigest(f.read) }
+  end
+end
+
 class Package
+  
   def initialize(fullfilename)
     @fullfilename = fullfilename
   end
@@ -57,6 +68,8 @@ class Package
   def get_wad_entries
     return @zip.entries.reject { |e| File.extname(e.name) != ".wad" }
   end
+
+
 end
 
 class PackageManager
@@ -264,3 +277,164 @@ class PackageManager
 
 end
 
+
+class BaseWad
+  def initialize(wadname, files)
+    @wadname = wadname
+    @files = files
+  end
+end
+
+
+class PackageFileList < Array
+  def initialize(file_list)
+    @file_map = {}
+    file_list.map do |fn|
+        puts "Processing #{fn}"
+        pkg = PackageFile.create(fn)
+        if !pkg.nil?
+          self.push pkg
+          basename = File.basename(fn)
+          @file_map[basename] = [] if @file_map[basename].nil?
+          @file_map[basename].push pkg
+        end
+    end
+  end
+
+  def resolve_dependencies(bsp)
+    bsp.dependencies.each do |file|
+      candidates = @file_map[File.basename(file)]
+      bsp.resolve[file] = resolve_conflicts(bsp, @file_map[File.basename(file)])
+    end
+  end
+
+  def wads
+    ret = []
+    self.each { |f| ret.push f.basename if f.src.ends_with?(".wad") }
+    return ret
+  end
+
+  def resolve_conflicts(bsp, arr)
+    return nil if arr.nil?
+    if arr.size == 1
+      return arr.first
+    else
+      return nil
+    end
+  end
+end
+
+class PackageFile
+
+  @@archives = {} 
+  VALID_EXT = [".bmp", ".bsp", ".mdl", ".spr", ".tga", ".txt", ".wad", ".wav"]
+  MOD_NAMES = ["cstrike", "valve"]
+
+  def self.create(src)
+    ext = File.extname(src)
+    case ext
+    when ".bsp"
+      return PackageBspFile.new(src)
+    when ".wad"
+      return PackageWadFile.new(src)
+    else
+      return PackageFile.new(src) if VALID_EXT.include?(ext)
+      return nil
+    end
+  end
+
+  def self.valid(src)
+    return VALID_EXT.include?(File.extname(src))
+  end
+
+  def self.add_basefiles(basename, files)
+    @@archives[basename] = files
+  end
+
+  def self.basefiles
+    @@archives
+  end
+
+  def self.basefile?(file)
+    basefiles.each do |archive, files|
+      return archive if files.include?(file)
+    end
+    nil
+  end
+
+  attr_reader :src, :sha1, :dependencies, :resolve
+
+  def initialize(src)
+    @src = src
+    File.open(src) { |f| @sha1 = Digest::SHA1.hexdigest(f.read) }
+    @dependencies = []
+    @basename = File.basename(@src)
+    @resolve = {}
+  end
+
+  def basename
+    File.basename(@src)
+  end
+
+  def create_zip(dst, zipname, &block)
+    fullname = File.join(dst, zipname)
+
+    block.call(src) if !block.nil?
+
+    Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
+      entry = zip.find_entry(src)
+      if entry.nil?
+        zip.add(src, src)
+      else
+        if entry.sha1 == sha1
+          puts "    File already existent"
+        else
+          puts "    Different file saved"
+        end
+      end
+
+      resolve.each do |filename, file|
+        entry = zip.find_entry(filename)
+        block.call(filename)
+        if entry.nil?
+          # TODO: check if find_entry is equal (sha1)
+          zip.add(filename, file.src)
+        else
+          if file.sha1 == entry.sha1
+            puts "    File already existent"
+          else
+            puts "    Different file saved"
+          end
+        end
+      end
+
+    end
+  end
+
+end
+
+class PackageBspFile < PackageFile
+  
+  attr_reader :wads, :files, :textures
+
+  def initialize(src)
+    super src
+    File.open(src) { |f| @wads, @files, @textures = BSP.get_info(f) }
+
+    @new_files = @files.reject { |file| PackageFile.basefile?(file) }
+    @dependencies += @new_files
+  end
+
+  def resolved?
+    @resolve.each { |key,value| return false if value.nil? }
+    return true
+  end
+end
+
+class PackageWadFile < PackageFile
+  attr_reader :textures
+  def initialize(src)
+    super src
+    File.open(src) { |f| @entries = WAD.get_entries(f) }
+  end
+end

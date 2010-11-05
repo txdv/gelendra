@@ -18,6 +18,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 =end
 
+$:.unshift File.join(File.dirname(__FILE__), *%w[.. lib])
+
 begin
   require 'gelendra'
 rescue LoadError
@@ -26,6 +28,6 @@ rescue LoadError
 end
 
 baseinfo = BaseInfo.instance
-cli = Cli.new(BaseInfo.instance, LocalInfo.new(baseinfo));
+cli = Cli2.new(BaseInfo.instance, LocalInfo.new(baseinfo));
 cliinvoker = CliInvoker.new(cli)
 cliinvoker.run(ARGV)
