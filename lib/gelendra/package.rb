@@ -334,6 +334,8 @@ class PackageFileList < Array
     deps = resolve_dependencies(bsp)
     texts = resolve_textures(bsp)
 
+    # resolve_readme(bsp)
+
     # TODO: raise exception
     return false if texts.has_value?(nil)
     return false if deps.has_value?(nil)
@@ -353,6 +355,15 @@ class PackageFileList < Array
     end
 
     return true
+  end
+
+  def resolve_readme(bsp)
+    txt_files = @file_map[File.extchange(bsp.basename, "txt")]
+    return nil if txt_files.nil?
+    
+    # we don't want no overview files
+    txt_files.reject! { |file| !file.is_a?(PackageTxtFile) }
+
   end
 
   def get_candidates(file)
@@ -414,6 +425,9 @@ class PackageFile
       return PackageBspFile.new(src)
     when ".wad"
       return PackageWadFile.new(src)
+    when ".txt"
+      return PackageTxtFile.new(src) if !Overview.check(src)
+      return PackageOverviewFile.new(src)
     else
       return PackageFile.new(src) if valid?(src)
       return nil
@@ -457,4 +471,10 @@ class PackageWadFile < PackageFile
     super src
     File.open(src) { |f| @textures = WAD.get_entries(f) }
   end
+end
+
+class PackageTxtFile < PackageFile
+end
+
+class PackageOverviewFile < PackageFile
 end
