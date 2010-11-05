@@ -675,11 +675,10 @@ class Cli2
   private
 
   def create_root_prefix(dst, file)
-    dirname = "v1"
     i = 2
-    filename = File.join(dst, dirname, file)
+    filename = File.join(dst, "v1", file)
     while File.exists?(filename)
-      dirname = "v#{i}"
+      filename = File.join(dst, "v#{i}", file)
       i += 1
     end
     dirname = Dir.dir(filename)
@@ -695,10 +694,16 @@ class Cli2
     return false if deps.has_value?(nil)
 
     deps.each do |filename, filearr|
-      filearr.each do |file|
+      filearr.unique.each do |file|
         File.copy(file.src, create_root_prefix(dst, filename))
       end
     end
+
+    fl.resolve_readme(bsp).unique.each do |r|
+      File.copy(r.src, create_root_prefix(dst, File.join("maps", r.basename)))
+    end
+
+    
 
   end
   public

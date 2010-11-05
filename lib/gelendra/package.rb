@@ -277,6 +277,15 @@ class PackageManager
 
 end
 
+class Array
+  def unique
+    hash = {}
+    each do |file|
+      hash[file.sha1] = file
+    end
+    return hash.values
+  end
+end
 
 class PackageFileList < Array
 
