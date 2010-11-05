@@ -319,8 +319,9 @@ class PackageFileList < Array
     deps = resolve_dependencies(bsp)
     texts = resolve_textures(bsp)
 
+    # TODO: raise exception
     return false if texts.has_value?(nil)
-    return false if deps.nil?
+    return false if deps.has_value?(nil)
       
     
     Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
@@ -380,7 +381,6 @@ class PackageFileList < Array
     resolved = {}
     unresolved.each do |file|
       resolved[file] = resolve_file_conflicts(bsp, get_candidates(file))
-      return nil if resolved[file].nil?
     end
 
     return resolved
