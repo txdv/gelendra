@@ -687,11 +687,18 @@ class Cli2
   end
 
   def create_root_process_file(dst, fl, bsp)
+
+    bspdst = create_root_prefix(dst, File.join("maps", bsp.basename))
+    first = bspdst.split("/")[1] == "v1"
+    raise "Multiple bsp files are not supported" if !first
+
     deps = fl.resolve_dependencies(bsp)
     texts = fl.resolve_textures(bsp)
 
     return false if texts.has_value?(nil)
     return false if deps.has_value?(nil)
+
+    File.copy(bsp.src, bspdst)
 
     deps.each do |filename, filearr|
       filearr.unique.each do |file|
@@ -699,11 +706,13 @@ class Cli2
       end
     end
 
+    texts.values.uniq.unique.each do |wad|
+      File.copy(wad.src, create_root_prefix(dst, wad.basename))
+    end
+
     fl.resolve_readme(bsp).unique.each do |r|
       File.copy(r.src, create_root_prefix(dst, File.join("maps", r.basename)))
     end
-
-    
 
   end
   public
