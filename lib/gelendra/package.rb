@@ -306,12 +306,6 @@ class PackageFileList < Array
     @basefiles = {}
   end
 
-  def wads
-    ret = []
-    self.each { |f| ret.push f.basename if f.src.ends_with?(".wad") }
-    return ret
-  end
-
   def add_basefiles(basename, files)
     @basefiles[basename] = files
   end
