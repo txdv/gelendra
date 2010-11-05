@@ -325,45 +325,33 @@ class PackageFileList < Array
       
     
     Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
-      entry = zip.find_entry(bsp.src)
       mapfile = File.join("maps", bsp.basename)
-      block.call(mapfile) if !block.nil?
+      entry = zip.find_entry(mapfile)
+      block.call(0, mapfile) if !block.nil?
 
       if entry.nil?
         zip.add(mapfile, bsp.src)
       else
-        if entry.sha1 == sha1
-          puts "    File already existent"
-        else
-          puts "    Different file saved"
-        end
+        block.call(1, entry.sha1 == bsp.sha1)
       end
 
       deps.each do |filename, file|
         entry = zip.find_entry(filename)
-        block.call(filename) if !block.nil?
+        block.call(0, filename) if !block.nil?
         if entry.nil?
           zip.add(filename, file.src)
         else
-          if file.sha1 == entry.sha1
-            puts "    File already existent"
-          else
-            puts "    Different file saved"
-          end
+          block.call(1, file.sha1 == entry.sha1)
         end
       end
 
       texts.values.uniq.each do |wad|
         entry = zip.find_entry(wad.basename)
-        block.call(wad.basename) if !block.nil?
+        block.call(0, wad.basename) if !block.nil?
         if entry.nil?
           zip.add(wad.basename, wad.src)
         else
-          if wad.sha1 == entry.sha1
-            puts "    File already existent"
-          else
-            puts "    Different file saved"
-          end
+          block.call(1, entry.sha1 == bsp.sha1)
         end
       end
     end

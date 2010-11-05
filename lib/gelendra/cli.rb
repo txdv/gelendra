@@ -641,7 +641,15 @@ class Cli2
         fullname = File.join(dst, File.extchange(file.basename, "zip"))
 
         puts "\nCreating #{fullname}"
-        if !fl.create_zip(file, fullname) { |file| puts "  adding #{file}" }
+        if !fl.create_zip(file, fullname) do |state, val| 
+          case state
+          when 0
+            puts "  adding #{val}" 
+          when 1
+            puts "  file already exists" if val
+            puts "  file differs" if !val
+          end
+        end
           puts "  unresolved dependencies"
         else
           puts "  file successfully generated"
