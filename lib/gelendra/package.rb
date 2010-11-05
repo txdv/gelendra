@@ -312,15 +312,6 @@ class PackageFileList < Array
     return ret
   end
 
-  def resolve_file_conflicts(bsp, arr)
-    return nil if arr.nil?
-    if arr.size == 1
-      return arr.first
-    else
-      return nil
-    end
-  end
-
   def add_basefiles(basename, files)
     @basefiles[basename] = files
   end
@@ -383,6 +374,15 @@ class PackageFileList < Array
     end
 
     return resolved
+  end
+
+  def resolve_file_conflicts(bsp, arr)
+    return nil if arr.nil?
+    if arr.size == 1
+      return arr.first
+    else
+      return nil
+    end
   end
 
 end
