@@ -290,14 +290,14 @@ class PackageFileList < Array
   def initialize(file_list)
     @file_map = {}
     file_list.map do |fn|
-        puts "Processing #{fn}"
-        pkg = PackageFile.create(fn)
-        if !pkg.nil?
-          self.push pkg
-          basename = File.basename(fn)
-          @file_map[basename] = [] if @file_map[basename].nil?
-          @file_map[basename].push pkg
-        end
+      puts "Processing #{fn}"
+      pkg = PackageFile.create(fn)
+      if !pkg.nil?
+        self.push pkg
+        basename = File.basename(fn)
+        @file_map[basename] = [] if @file_map[basename].nil?
+        @file_map[basename].push pkg
+      end
     end
   end
 
