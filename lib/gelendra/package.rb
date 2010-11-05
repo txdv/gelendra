@@ -397,7 +397,6 @@ class PackageFile
         entry = zip.find_entry(filename)
         block.call(filename)
         if entry.nil?
-          # TODO: check if find_entry is equal (sha1)
           zip.add(filename, file.src)
         else
           if file.sha1 == entry.sha1
