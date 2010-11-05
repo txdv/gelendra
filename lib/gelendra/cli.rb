@@ -633,16 +633,17 @@ class Cli2
   def create_packages(src, dst)
     file_list = Dir.find_all_files(src)
     fl = PackageFileList.new(file_list)
+    @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
     fl.each do |file|
       if file.is_a?(PackageBspFile)
-        fl.resolve_dependencies file
-        if file.resolved?
-          zipname = File.extchange(file.basename, "zip")
-          fullname = File.join(dst, zipname)
-          puts "creating #{fullname}"
-          puts
-          file.create_zip(fullname) { |src| puts "  adding #{src}" }
-          puts
+
+        fullname = File.join(dst, File.extchange(file.basename, "zip"))
+
+        puts "\nCreating #{fullname}"
+        if !fl.create_zip(file, fullname) { |file| puts "  adding #{file}" }
+          puts "  unresolved dependencies"
+        else
+          puts "  file successfully generated"
         end
       end
     end

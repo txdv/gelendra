@@ -31,13 +31,10 @@ class BaseInfo
     File.open(BASEFILES, "r") do |f|
       @basefiles = YAML::load(f.read)
     end
+  end
 
-    @basefiles[:files].each do |archive, files|
-      PackageFile.add_basefiles(archive, files)
-    end
-
-    @basefiles[:wads].each do |bla|
-    end
+  def basefiles
+    @basefiles[:files]
   end
 
   def base_dir

@@ -287,6 +287,9 @@ end
 
 
 class PackageFileList < Array
+
+  attr_reader :basefiles
+
   def initialize(file_list)
     @file_map = {}
     file_list.map do |fn|
@@ -299,13 +302,8 @@ class PackageFileList < Array
         @file_map[basename].push pkg
       end
     end
-  end
 
-  def resolve_dependencies(bsp)
-    bsp.file_dep.each do |file|
-      candidates = @file_map[File.basename(file)]
-      bsp.resolve[file] = resolve_conflicts(bsp, @file_map[File.basename(file)])
-    end
+    @basefiles = {}
   end
 
   def wads
@@ -314,7 +312,7 @@ class PackageFileList < Array
     return ret
   end
 
-  def resolve_conflicts(bsp, arr)
+  def resolve_file_conflicts(bsp, arr)
     return nil if arr.nil?
     if arr.size == 1
       return arr.first
@@ -322,6 +320,71 @@ class PackageFileList < Array
       return nil
     end
   end
+
+  def add_basefiles(basename, files)
+    @basefiles[basename] = files
+  end
+
+  def basefile?(file)
+    basefiles.each do |archive, files|
+      return archive if files.include?(file)
+    end
+    nil
+  end
+
+  def create_zip(bsp, fullname, &block)
+    deps = resolve_dependencies(bsp)
+    return false if deps.nil?
+      
+    
+    Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
+      entry = zip.find_entry(bsp.src)
+      block.call(bsp.src) if !block.nil?
+
+      if entry.nil?
+        zip.add(bsp.src, bsp.src)
+      else
+        if entry.sha1 == sha1
+          puts "    File already existent"
+        else
+          puts "    Different file saved"
+        end
+      end
+
+      deps.each do |filename, file|
+        entry = zip.find_entry(filename)
+        block.call(filename) if !block.nil?
+        if entry.nil?
+          zip.add(filename, file.src)
+        else
+          if file.sha1 == entry.sha1
+            puts "    File already existent"
+          else
+            puts "    Different file saved"
+          end
+        end
+      end
+    end
+
+    return true
+  end
+
+  def get_candidates(file)
+    return @file_map[File.basename(file)]
+  end
+
+  def resolve_dependencies(bsp)
+    unresolved = bsp.files.reject { |f| basefile?(f) }
+
+    resolved = {}
+    unresolved.each do |file|
+      resolved[file] = resolve_file_conflicts(bsp, get_candidates(file))
+      return nil if resolved[file].nil?
+    end
+
+    return resolved
+  end
+
 end
 
 class PackageFile
@@ -346,80 +409,28 @@ class PackageFile
     end
   end
 
-  def self.add_basefiles(basename, files)
-    @@archives[basename] = files
-  end
-
-  def self.basefiles
-    @@archives
-  end
-
-  def self.basefile?(file)
-    basefiles.each do |archive, files|
-      return archive if files.include?(file)
-    end
-    nil
-  end
-
-  attr_reader :src, :sha1, :file_dep, :resolve
+  attr_reader :src, :sha1
 
   def initialize(src)
     @src = src
     File.open(src) { |f| @sha1 = Digest::SHA1.hexdigest(f.read) }
-    @file_dep = []
     @basename = File.basename(@src)
-    @resolve = {}
   end
 
   def basename
     File.basename(@src)
   end
 
-  def create_zip(fullname, &block)
-
-    block.call(src) if !block.nil?
-
-    Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
-      entry = zip.find_entry(src)
-      if entry.nil?
-        zip.add(src, src)
-      else
-        if entry.sha1 == sha1
-          puts "    File already existent"
-        else
-          puts "    Different file saved"
-        end
-      end
-
-      resolve.each do |filename, file|
-        entry = zip.find_entry(filename)
-        block.call(filename)
-        if entry.nil?
-          zip.add(filename, file.src)
-        else
-          if file.sha1 == entry.sha1
-            puts "    File already existent"
-          else
-            puts "    Different file saved"
-          end
-        end
-      end
-
-    end
-  end
-
 end
 
 class PackageBspFile < PackageFile
   
-  attr_reader :wads, :files, :textures, :texture_dep
+  attr_reader :wads, :files, :textures
 
   def initialize(src)
     super src
     File.open(src) { |f| @wads, @files, @textures = BSP.get_info(f) }
 
-    @new_files = @files.reject { |file| PackageFile.basefile?(file) }
-    @file_dep += @new_files
     @texture_dep = {}
   end
 
