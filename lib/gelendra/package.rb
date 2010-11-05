@@ -302,7 +302,7 @@ class PackageFileList < Array
   end
 
   def resolve_dependencies(bsp)
-    bsp.dependencies.each do |file|
+    bsp.file_dep.each do |file|
       candidates = @file_map[File.basename(file)]
       bsp.resolve[file] = resolve_conflicts(bsp, @file_map[File.basename(file)])
     end
@@ -362,12 +362,12 @@ class PackageFile
     nil
   end
 
-  attr_reader :src, :sha1, :dependencies, :resolve
+  attr_reader :src, :sha1, :file_dep, :resolve
 
   def initialize(src)
     @src = src
     File.open(src) { |f| @sha1 = Digest::SHA1.hexdigest(f.read) }
-    @dependencies = []
+    @file_dep = []
     @basename = File.basename(@src)
     @resolve = {}
   end
@@ -421,7 +421,7 @@ class PackageBspFile < PackageFile
     File.open(src) { |f| @wads, @files, @textures = BSP.get_info(f) }
 
     @new_files = @files.reject { |file| PackageFile.basefile?(file) }
-    @dependencies += @new_files
+    @file_dep += @new_files
   end
 
   def resolved?
