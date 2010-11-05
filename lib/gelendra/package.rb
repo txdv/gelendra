@@ -343,7 +343,7 @@ class PackageFileList < Array
       mapfile = File.join("maps", bsp.basename)
       create_zip_add(zip, mapfile, bsp, &block)
 
-      deps.each do |filename, file|
+      deps.sort.each do |filename, file|
         create_zip_add(zip, filename, file, &block)
       end
 
