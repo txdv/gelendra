@@ -330,21 +330,20 @@ class PackageFile
   VALID_EXT = [".bmp", ".bsp", ".mdl", ".spr", ".tga", ".txt", ".wad", ".wav"]
   MOD_NAMES = ["cstrike", "valve"]
 
+  def self.valid?(src)
+    return VALID_EXT.include?(File.extname(src))
+  end
+
   def self.create(src)
-    ext = File.extname(src)
-    case ext
+    case File.extname(src)
     when ".bsp"
       return PackageBspFile.new(src)
     when ".wad"
       return PackageWadFile.new(src)
     else
-      return PackageFile.new(src) if VALID_EXT.include?(ext)
+      return PackageFile.new(src) if valid?(src)
       return nil
     end
-  end
-
-  def self.valid(src)
-    return VALID_EXT.include?(File.extname(src))
   end
 
   def self.add_basefiles(basename, files)
