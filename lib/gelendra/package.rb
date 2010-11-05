@@ -278,17 +278,10 @@ class PackageManager
 end
 
 
-class BaseWad
-  def initialize(wadname, files)
-    @wadname = wadname
-    @files = files
-  end
-end
-
-
 class PackageFileList < Array
 
   attr_reader :basefiles
+  attr_reader :wads
 
   def initialize(file_list)
     @file_map = {}
@@ -304,10 +297,15 @@ class PackageFileList < Array
     end
 
     @basefiles = {}
+    @wads = {}
   end
 
   def add_basefiles(basename, files)
     @basefiles[basename] = files
+  end
+
+  def add_wad(wad, textures)
+    @wads[wad] = textures
   end
 
   def basefile?(file)
@@ -319,6 +317,9 @@ class PackageFileList < Array
 
   def create_zip(bsp, fullname, &block)
     deps = resolve_dependencies(bsp)
+    texts = resolve_textures(bsp)
+
+    return false if texts.has_value?(nil)
     return false if deps.nil?
       
     
@@ -343,6 +344,20 @@ class PackageFileList < Array
           zip.add(filename, file.src)
         else
           if file.sha1 == entry.sha1
+            puts "    File already existent"
+          else
+            puts "    Different file saved"
+          end
+        end
+      end
+
+      texts.values.uniq.each do |wad|
+        entry = zip.find_entry(wad.basename)
+        block.call(wad.basename) if !block.nil?
+        if entry.nil?
+          zip.add(wad.basename, wad.src)
+        else
+          if wad.sha1 == entry.sha1
             puts "    File already existent"
           else
             puts "    Different file saved"
@@ -377,6 +392,23 @@ class PackageFileList < Array
     else
       return nil
     end
+  end
+
+  def basetexture?(texture)
+    @wads.each { |wad, textures| return true if textures.include?(texture) }
+    return false
+  end
+
+  def resolve_textures(bsp)
+    missing_textures = bsp.textures.reject { |text| basetexture?(text) }
+
+    wads = self.reject { |i| !i.is_a?(PackageWadFile) }
+    resolved = {}
+    missing_textures.each do |texture|
+      resolved[texture] = nil
+      wads.each { |wad| resolved[texture] = wad if wad.textures.include?(texture) }
+    end
+    return resolved
   end
 
 end
@@ -438,6 +470,6 @@ class PackageWadFile < PackageFile
   attr_reader :textures
   def initialize(src)
     super src
-    File.open(src) { |f| @entries = WAD.get_entries(f) }
+    File.open(src) { |f| @textures = WAD.get_entries(f) }
   end
 end

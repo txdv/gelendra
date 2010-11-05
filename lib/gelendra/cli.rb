@@ -634,6 +634,7 @@ class Cli2
     file_list = Dir.find_all_files(src)
     fl = PackageFileList.new(file_list)
     @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
+    @baseinfo.wads.each { |wad, textures| fl.add_wad(wad, textures) }
     fl.each do |file|
       if file.is_a?(PackageBspFile)
 
