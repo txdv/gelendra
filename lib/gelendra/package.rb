@@ -325,10 +325,11 @@ class PackageFileList < Array
     
     Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
       entry = zip.find_entry(bsp.src)
-      block.call(bsp.src) if !block.nil?
+      mapfile = File.join("maps", bsp.basename)
+      block.call(mapfile) if !block.nil?
 
       if entry.nil?
-        zip.add(bsp.src, bsp.src)
+        zip.add(mapfile, bsp.src)
       else
         if entry.sha1 == sha1
           puts "    File already existent"
