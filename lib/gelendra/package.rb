@@ -315,6 +315,21 @@ class PackageFileList < Array
     nil
   end
 
+  private
+  
+  def create_zip_add(zip, filename, file, &block)
+    entry = zip.find_entry(filename)
+    block.call(0, filename) if !block.nil?
+
+    if entry.nil?
+      zip.add(filename, file.src)
+    else
+      block.call(1, entry.sha1 == file.sha1)
+    end
+  end
+
+  public
+
   def create_zip(bsp, fullname, &block)
     deps = resolve_dependencies(bsp)
     texts = resolve_textures(bsp)
@@ -326,33 +341,14 @@ class PackageFileList < Array
     
     Zip::ZipFile.open(fullname, Zip::ZipFile::CREATE) do |zip|
       mapfile = File.join("maps", bsp.basename)
-      entry = zip.find_entry(mapfile)
-      block.call(0, mapfile) if !block.nil?
-
-      if entry.nil?
-        zip.add(mapfile, bsp.src)
-      else
-        block.call(1, entry.sha1 == bsp.sha1)
-      end
+      create_zip_add(zip, mapfile, bsp, &block)
 
       deps.each do |filename, file|
-        entry = zip.find_entry(filename)
-        block.call(0, filename) if !block.nil?
-        if entry.nil?
-          zip.add(filename, file.src)
-        else
-          block.call(1, file.sha1 == entry.sha1)
-        end
+        create_zip_add(zip, filename, file, &block)
       end
 
       texts.values.uniq.each do |wad|
-        entry = zip.find_entry(wad.basename)
-        block.call(0, wad.basename) if !block.nil?
-        if entry.nil?
-          zip.add(wad.basename, wad.src)
-        else
-          block.call(1, entry.sha1 == bsp.sha1)
-        end
+        create_zip_add(zip, wad.basename, wad, &block)
       end
     end
 
