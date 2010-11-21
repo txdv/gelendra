@@ -33,8 +33,9 @@ Though you need the wad files to check if all textures are really present, a lot
 
 Files which are of interested:
 
-* .bmp - overview of a map, resides in overviews/<mapname>/
-* .tga - overview of a map, resides in overviews/<mapname>/ (very rare)
+* .bmp - overview of a map
+* .tga - overview of a map (very rare)
+* .res - a list of files belonging to a map
 * .txt - overview setup, sets the bmp straight, resides in the overviews directory too
 * .bsp - the map file, which contains most of the information, resides in maps/
 * .mdl - model file
@@ -57,7 +58,6 @@ Other files which occure a lot of times with maps and have no meaning when packa
 * .dem - demo files
 * .ztmp - created by the server when transfering maps
 * .ent - extracted entity files of the map
-* .res - a list of files belonging to a map (good idea), not including the wad
 * .bak - backup files of normal files
 * .rar - archive system
 * .zip - archive system
@@ -96,6 +96,10 @@ The following 2 are absolutely needed by the server in order to serve a game. Th
 * wad -> cstrike/
 * bsp -> cstrike/maps/
 
+Res files are needed by the server to determine what files to precache and to send to the user. If a wad is missing on the client side, the client will crash, by adding it into the res file it will ensure that the player will precache the file before executing the map.
+
+* res -> cstrike/maps/
+
 The following 3 are needed if one wants an overview of its map
 * txt -> cstrike/overviews/
 * bmp -> cstrike/overviews/
@@ -114,7 +118,6 @@ These files have absolutely no relevance, nor to the client nor to the server.
 Only informational value.
 
 * txt -> cstrike/maps/
-* res -> cstrike/maps/
 
 == License
 
