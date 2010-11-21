@@ -78,7 +78,11 @@ class CliInvoker
         #puts arguments
         #puts evalstr
         #puts
-        eval(evalstr)
+        begin
+          eval(evalstr)
+        rescue CliException => error
+          puts error.message
+        end
         return
       end
       x += 1
@@ -161,39 +165,6 @@ class Cli
 
   def package_list(name = "*")
     puts @localinfo.get_packages(name)
-  end
-
-  def basedir_add(dir)
-    if File.directory?(dir)
-      dir = File.expand_path(dir)
-      if !@baseinfo.base_dir.include?(dir)
-        @baseinfo.base_dir.push File.expand_path(dir)
-        @baseinfo.save
-      else
-        puts "Directory already in basedir path: #{dir}"
-      end
-    else
-      puts "No such directory: #{dir}"
-    end
-  end
-
-  def basedir_rem(dir)
-    dir = File.expand_path(dir)
-    
-    if @baseinfo.base_dir.include?(dir)
-      @baseinfo.base_dir.delete(dir)
-      @baseinfo.save
-      puts "basedir removed: #{dir}"
-    else
-      puts "No such directory in database: #{dir}"
-    end
-  end
-
-  def basedir_list
-    puts "Base directories remembered:\n"
-    puts
-    puts @baseinfo.base_dir
-    puts
   end
 
   alias :list_packages :package_list
@@ -529,15 +500,6 @@ This program comes with ABSOLUTELY NO WARRANTY;
 This is free software, and you are welcome to redistribute it
 under certain conditions; read the file 'LICENSE' for further details
 
-  basedir add <directory>
-    remembers a directory, where it will look for packages
-
-  basedir rem <directory>
-    removes a basedir directory
-
-  basedir list
-    lists all added basedirs
-
   package install <pattern|package>
     extracts a package in the current directory and puts all the data to the local database
     or all packages matching the pattern
@@ -612,6 +574,14 @@ class Dir
     file.gsub(Regexp.new(File.basename(file) + "$"), "")
   end
 end
+
+class CliException < RuntimeError
+  attr :message
+  def initialize(message)
+    @message = message
+  end
+end
+
 class Cli2
 
   def initialize(baseinfo, localinfo)
@@ -620,6 +590,41 @@ class Cli2
     @pm = PackageManager.new(localinfo)
     # @localinfo = localinfo
     #@manager = manager
+  end
+
+  def r(message)
+    raise CliException.new(message)
+  end
+
+  def basedir_add(dir)
+    r "No such directory: #{dir}" if !File.directory?(dir)
+
+    dir = File.expand_path(dir)
+
+    r "Directory already in basedir path: #{dir}" if @baseinfo.base_dir.include?(dir)
+
+    @baseinfo.base_dir.push dir
+    @baseinfo.save
+    puts "added to basedir list: #{dir}"
+  end
+
+  def basedir_rem(dir)
+    r "No such directory: #{dir}" if !File.directory?(dir)
+
+    dir = File.expand_path(dir)
+    
+    r "No such directory in database: #{dir}" if !@baseinfo.base_dir.include?(dir)
+
+    @baseinfo.base_dir.delete(dir)
+    @baseinfo.save
+    puts "removed from basedir list: #{dir}"
+  end
+
+  def basedir_list
+    puts "Basedir list:\n"
+    puts
+    puts @baseinfo.base_dir
+    puts
   end
 
   def info(file)
@@ -722,6 +727,15 @@ Copyright (C) 2010 Andrius Bentkus
 This program comes with ABSOLUTELY NO WARRANTY; 
 This is free software, and you are welcome to redistribute it
 under certain conditions; read the file 'LICENSE' for further details
+
+  basedir add <directory>
+    add a directory to the basedir list, gelendra will look for packages inside it
+
+  basedir rem <directory>
+    removes a a directory from the basedir list
+
+  basedir list
+    lists all added directories added to the basedir list
 
   info <file>
     prints out information about the file, for now only about bsp files
