@@ -40,7 +40,7 @@ class Package
     @zip.close
   end
 
-  def get_info_from_bsp
+  def bsp_info
     
     return BSP.get_info(get_bsp.get_input_stream) if is_map?
     return nil
@@ -86,7 +86,7 @@ class PackageManager
       return
     end
 
-    bsp_wads, files, textures = pack.get_info_from_bsp
+    bsp_wads, files, textures = pack.bsp_info
 
     #p pack.get_files_from_zip
     files.each do |file|
