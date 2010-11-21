@@ -227,21 +227,6 @@ class Cli
     end
   end
 
-=begin
-  def softlink_base(basedir, pattern = "*")
-    # TODO: rewrite localinfo
-    puts pattern
-    @localinfo.get_packages(pattern).each do |package|
-      puts @localinfo.files(package)
-    end
-  end
-
-  def softlink_rebase
-
-  end
-=end
-
-
   # TODO: manage double occurences of files
   def package_create(bspfile, src, dst)
     
