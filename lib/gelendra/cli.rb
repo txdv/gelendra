@@ -66,12 +66,14 @@ class CliInvoker
       
       if (methods.size == 1)
         funcname = name.join("_")
-        arguments = ARGV[x+1..-1].join('", "')
+        arguments = "\"#{ARGV[x+1..-1].join('", "')}\""
 
         evalstr = "@klass.#{funcname}"                       if arguments.size == 0
         evalstr = "@klass.#{funcname}(#{arguments.inspect})" if arguments.size == 1
-        evalstr = "@klass.#{funcname}(\"#{arguments}\")"     if arguments.size > 1
+        evalstr = "@klass.#{funcname}(#{arguments})"         if arguments.size > 1
+
         eval(evalstr)
+
         return
       end
       x += 1
