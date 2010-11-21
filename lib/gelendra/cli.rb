@@ -676,6 +676,11 @@ class Cli2
     files.each { |file| puts "  #{file}" }
   end
 
+  def list_allmaps
+    r "cstrike/maps/ not existent" if !File.directory?("cstrike/maps")
+    puts Dir["cstrike/maps/*bsp"].sort.collect { |f| File.basename(f) }
+  end
+
   private
 
   def create_root_prefix(dst, file)
@@ -719,6 +724,7 @@ class Cli2
     end
 
   end
+
   public
 
   def help
@@ -745,6 +751,10 @@ under certain conditions; read the file 'LICENSE' for further details
 
   info <file>
     prints out information about the file, for now only about bsp files
+
+  list allmaps
+    lists all installed maps
+
 HELPSTRING
   end
     
