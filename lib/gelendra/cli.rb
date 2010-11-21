@@ -521,19 +521,6 @@ class Cli
 
   public
 
-  def bspinfo(file)
-    f = File.open(file)
-    wads, files, textures = BSP.get_info(f)
-    f.close
-    
-    puts "File information for #{file}"
-    puts
-    puts "wads: #{wads.join(", ")}"
-    puts
-    puts "optional files"
-    puts files
-
-  end
 
   def help
     puts <<HELPSTRING
@@ -635,6 +622,18 @@ class Cli2
     #@manager = manager
   end
 
+  def info(file)
+    f = File.open(file)
+    wads, files, textures = BSP.get_info(f)
+    f.close
+
+    puts "#{file} dependencies:"
+    puts "wad:"
+    wads.each { |wad| puts "  #{wad}" }
+    puts "file:"
+    files.each { |file| puts "  #{file}" }
+  end
+
   def create_packages(src, dst)
     file_list = Dir.find_all_files(src)
     fl = PackageFileList.new(file_list)
@@ -723,6 +722,9 @@ Copyright (C) 2010 Andrius Bentkus
 This program comes with ABSOLUTELY NO WARRANTY; 
 This is free software, and you are welcome to redistribute it
 under certain conditions; read the file 'LICENSE' for further details
+
+  info <file>
+    prints out information about the file, for now only about bsp files
 
   create packages <source dir> <destination dir>
     searches in the source dir for all possible files, creates self contained zip packages for every map file.
