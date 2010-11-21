@@ -40,6 +40,7 @@ class String
     end
   end
 
+=begin
   def method_missing(name, *args)
     name = name.to_s.split("_")
     case name.shift
@@ -52,6 +53,7 @@ class String
     end
     raise "method missing"
   end
+=end
   
   def starts_with(prefix)
     return self[/^#{prefix}/] 

@@ -45,54 +45,67 @@ class File
   end
 end
 
-class CliInvoker
-  public
-  def initialize(klass)
-    @klass = klass
-    @methods = klass.public_methods - Class.public_methods
+class CliBase
+
+  def self.command(hash, &block)
+    @@commands = {} if !defined?(@@commands)
+    raise "You need at least to supply the command string :string" if !hash.has_key?(:string)
+    string = hash.delete(:string)
+    @@commands[string] = hash
+    @@commands[string][:block] = block
+  end
+
+  def help
+    puts help_header if defined?(help_header)
+    @@commands.each do |string, command|
+      string = string.to_s.split("_").join(" ")
+
+      arguments = command[:arguments]
+      puts
+      if arguments.nil?
+        puts "string"
+      else
+        puts "#{string} #{command[:arguments]}"
+      end
+      puts "  #{command[:help]}"
+    end
+  end
+
+  def return_help
+    help
+    exit
   end
 
   def run(args)
+    return_help if args.first == "help"
+
     name = []
     
-    methods = @methods
+    methods = @@commands.collect { |function_name, info| function_name.to_s }
+
+    pair = nil
 
     x = 0
     while x < ARGV.size
-      methods = collect_start(methods, ARGV[x])
-      methods = trunc(methods, ARGV[x].to_s)
       name.push ARGV[x]
+      
+      funcname = name.join("_")
+      pair = [funcname, ARGV[x+1..-1]] if methods.include?(funcname)
       x += 1
     end
 
-    funcname = name.join("_")
+    return_help if pair.nil?
 
-    raise "No such command, consider using help" if !@klass.public_methods.include?(funcname)
+    funcname, arguments = pair
 
-    arguments = ARGV[x..-1].join('", "')
+    proc = @@commands[funcname.to_sym][:block]
 
-    evalstr = "@klass.#{funcname}"                       if arguments.size == 0
-    evalstr = "@klass.#{funcname}(#{arguments.inspect})" if arguments.size == 1
-    evalstr = "@klass.#{funcname}(\"#{arguments}\")"     if arguments.size > 1
-
-    eval(evalstr)
+    self.instance_exec(*arguments, &proc)
 
   rescue CliException => error
     puts error.message
   end
 
-  private 
-  def trunc(methods, arg)
-    methods.collect { |name| name.split("_")[1..-1].join("_") }
-  end
-
-  def starts_with(fullname, startstr)
-    fullname.split("_").first == startstr
-  end
-  
-  def collect_start(methods, startstr)
-    methods.reject { |func| !starts_with(func, startstr) }
-  end
 end
 
 
@@ -573,7 +586,7 @@ class CliException < RuntimeError
   end
 end
 
-class Cli2
+class Cli2 < CliBase
 
   def initialize(baseinfo, localinfo)
     @baseinfo = baseinfo
@@ -587,7 +600,10 @@ class Cli2
     raise CliException.new(message)
   end
 
-  def create_packages(src, dst)
+  command :arguments => [ "source dir", "destination dir" ],
+          :help => "searches in the source dir for all possible files, creates self contained zip packages for every map file.",
+          :string => :create_packages do |src, dst|
+
     file_list = Dir.find_all_files(src)
     fl = PackageFileList.new(file_list)
     @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
@@ -615,7 +631,10 @@ class Cli2
     end
   end
 
-  def create_root(src, dst)
+  command :arguments => [ "source dir", "destination dir" ],
+          :help => "creates a file index of unique files with different subversion directories.",
+          :string => :create_root do |src, dst|
+
     file_list = Dir.find_all_files(src)
     fl = PackageFileList.new(file_list)
     @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
@@ -624,7 +643,9 @@ class Cli2
     fl.bsp_files.each { |bsp| create_root_process_file(dst, fl, bsp) }
   end
 
-  def basedir_add(dir)
+  command :arguments => [ "directory" ],
+          :help => "add a directory to the basedir list, gelendra will look for packages inside it",
+          :string => :basedir_add do |dir|
     r "No such directory: #{dir}" if !File.directory?(dir)
 
     dir = File.expand_path(dir)
@@ -636,7 +657,10 @@ class Cli2
     puts "added to basedir list: #{dir}"
   end
 
-  def basedir_rem(dir)
+  command :arguments => [ "directory" ],
+          :help => "removes a a directory from the basedir list",
+          :string => :basedir_rem do |dir|
+
     r "No such directory: #{dir}" if !File.directory?(dir)
 
     dir = File.expand_path(dir)
@@ -648,14 +672,19 @@ class Cli2
     puts "removed from basedir list: #{dir}"
   end
 
-  def basedir_list
+  command :help => "lists all added directories added to the basedir list",
+          :arugment => [ "directory" ],
+          :string => :basedir_list do
     puts "Basedir list:\n"
     puts
     puts @baseinfo.base_dir
     puts
   end
 
-  def info(file)
+  command :arguments => ["file"],
+          :help => "prints out information about the file, for now only about bsp files",
+          :string => :info do |file| 
+
     f = File.open(file)
     wads, files, textures = BSP.get_info(f)
     f.close
@@ -667,7 +696,9 @@ class Cli2
     files.each { |file| puts "  #{file}" }
   end
 
-  def list_allmaps
+  command :help => "lists all maps in the cstrike/maps directory",
+          :string => :list_allmaps do
+
     r "cstrike/maps/ not existent" if !File.directory?("cstrike/maps")
     puts Dir["cstrike/maps/*bsp"].sort.collect { |f| File.basename(f) }
   end
@@ -718,35 +749,12 @@ class Cli2
 
   public
 
-  def help
-    puts <<HELPSTRING
+  def help_header; <<HELPSTRING
 Copyright (C) 2010 Andrius Bentkus
 This program comes with ABSOLUTELY NO WARRANTY; 
 This is free software, and you are welcome to redistribute it
 under certain conditions; read the file 'LICENSE' for further details
-
-  create packages <source dir> <destination dir>
-    searches in the source dir for all possible files, creates self contained zip packages for every map file.
-
-  create root <source dir> <destination dir>
-    creates a file index of unique files with different subversion directories.
-
-  basedir add <directory>
-    add a directory to the basedir list, gelendra will look for packages inside it
-
-  basedir rem <directory>
-    removes a a directory from the basedir list
-
-  basedir list
-    lists all added directories added to the basedir list
-
-  info <file>
-    prints out information about the file, for now only about bsp files
-
-  list allmaps
-    lists all installed maps
-
 HELPSTRING
   end
-    
+
 end

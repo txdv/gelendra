@@ -20,14 +20,10 @@
 
 $:.unshift File.join(File.dirname(__FILE__), *%w[.. lib])
 
-begin
-  require 'gelendra'
-rescue LoadError
-  require 'rubygems'
-  require 'gelendra'
-end
+require 'rubygems'
+require 'gelendra'
+require 'gelendra/info'
 
 baseinfo = BaseInfo.instance
 cli = Cli2.new(BaseInfo.instance, LocalInfo.new(baseinfo));
-cliinvoker = CliInvoker.new(cli)
-cliinvoker.run(ARGV)
+cli.run(ARGV)

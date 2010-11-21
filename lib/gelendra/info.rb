@@ -17,10 +17,13 @@
 =end
 
 class BaseInfo
-  include Singleton
-
   BASEINFOFILE = "#{Etc.getpwuid.dir}/.gelendra.yaml"
   BASEFILES = "#{Etc.getpwuid.dir}/.basefiles.yaml"
+
+  def self.instance
+    @@instance = self.new if !defined?(@@instance)
+    return @@instance
+  end
 
   def initialize
     File.open(BASEINFOFILE, "a+") do |f|
