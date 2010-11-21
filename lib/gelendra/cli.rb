@@ -588,6 +588,14 @@ end
 
 class Cli2 < CliBase
 
+  def help_header; <<HELPSTRING
+Copyright (C) 2010 Andrius Bentkus
+This program comes with ABSOLUTELY NO WARRANTY; 
+This is free software, and you are welcome to redistribute it
+under certain conditions; read the file 'LICENSE' for further details
+HELPSTRING
+  end
+
   def initialize(baseinfo, localinfo)
     @baseinfo = baseinfo
     @localinfo = localinfo
@@ -747,16 +755,6 @@ class Cli2 < CliBase
       File.copy(r.src, create_root_prefix(dst, File.join("maps", r.basename)))
     end
 
-  end
-
-  public
-
-  def help_header; <<HELPSTRING
-Copyright (C) 2010 Andrius Bentkus
-This program comes with ABSOLUTELY NO WARRANTY; 
-This is free software, and you are welcome to redistribute it
-under certain conditions; read the file 'LICENSE' for further details
-HELPSTRING
   end
 
 end
