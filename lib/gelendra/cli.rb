@@ -596,6 +596,43 @@ class Cli2
     raise CliException.new(message)
   end
 
+  def create_packages(src, dst)
+    file_list = Dir.find_all_files(src)
+    fl = PackageFileList.new(file_list)
+    @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
+    @baseinfo.wads.each { |wad, textures| fl.add_wad(wad, textures) }
+    fl.each do |file|
+      if file.is_a?(PackageBspFile)
+
+        fullname = File.join(dst, File.extchange(file.basename, "zip"))
+
+        puts "\nCreating #{fullname}"
+        if !fl.create_zip(file, fullname) do |state, val| 
+          case state
+          when 0
+            puts "  adding #{val}" 
+          when 1
+            puts "  file already exists" if val
+            puts "  file differs" if !val
+          end
+        end
+          puts "  unresolved dependencies"
+        else
+          puts "  file successfully generated"
+        end
+      end
+    end
+  end
+
+  def create_root(src, dst)
+    file_list = Dir.find_all_files(src)
+    fl = PackageFileList.new(file_list)
+    @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
+    @baseinfo.wads.each { |wad, textures| fl.add_wad(wad, textures) }
+
+    fl.bsp_files.each { |bsp| create_root_process_file(dst, fl, bsp) }
+  end
+
   def basedir_add(dir)
     r "No such directory: #{dir}" if !File.directory?(dir)
 
@@ -637,43 +674,6 @@ class Cli2
     wads.each { |wad| puts "  #{wad}" }
     puts "file:"
     files.each { |file| puts "  #{file}" }
-  end
-
-  def create_packages(src, dst)
-    file_list = Dir.find_all_files(src)
-    fl = PackageFileList.new(file_list)
-    @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
-    @baseinfo.wads.each { |wad, textures| fl.add_wad(wad, textures) }
-    fl.each do |file|
-      if file.is_a?(PackageBspFile)
-
-        fullname = File.join(dst, File.extchange(file.basename, "zip"))
-
-        puts "\nCreating #{fullname}"
-        if !fl.create_zip(file, fullname) do |state, val| 
-          case state
-          when 0
-            puts "  adding #{val}" 
-          when 1
-            puts "  file already exists" if val
-            puts "  file differs" if !val
-          end
-        end
-          puts "  unresolved dependencies"
-        else
-          puts "  file successfully generated"
-        end
-      end
-    end
-  end
-
-  def create_root(src, dst)
-    file_list = Dir.find_all_files(src)
-    fl = PackageFileList.new(file_list)
-    @baseinfo.basefiles.each { |mod, files| fl.add_basefiles(mod, files) }
-    @baseinfo.wads.each { |wad, textures| fl.add_wad(wad, textures) }
-
-    fl.bsp_files.each { |bsp| create_root_process_file(dst, fl, bsp) }
   end
 
   private
@@ -728,6 +728,12 @@ This program comes with ABSOLUTELY NO WARRANTY;
 This is free software, and you are welcome to redistribute it
 under certain conditions; read the file 'LICENSE' for further details
 
+  create packages <source dir> <destination dir>
+    searches in the source dir for all possible files, creates self contained zip packages for every map file.
+
+  create root <source dir> <destination dir>
+    creates a file index of unique files with different subversion directories.
+
   basedir add <directory>
     add a directory to the basedir list, gelendra will look for packages inside it
 
@@ -739,12 +745,6 @@ under certain conditions; read the file 'LICENSE' for further details
 
   info <file>
     prints out information about the file, for now only about bsp files
-
-  create packages <source dir> <destination dir>
-    searches in the source dir for all possible files, creates self contained zip packages for every map file.
-
-  create root <source dir> <destination dir>
-    creates a file index of unique files with different subversion directories.
 HELPSTRING
   end
     
