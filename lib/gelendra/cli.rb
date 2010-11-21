@@ -83,7 +83,7 @@ class CliInvoker
 
   private 
   def trunc(methods, arg)
-    methods.collect { |name| name.split("_")[1...9999].join("_") }
+    methods.collect { |name| name.split("_")[1..-1].join("_") }
   end
 
   def starts_with(fullname, startstr)
