@@ -77,14 +77,14 @@ class CliInvoker
         end
         begin
           eval(evalstr)
-        rescue CliException => error
-          puts error.message
         end
         return
       end
       x += 1
     end
     puts "gelendra: did not understand you, maybe you need some help? type gelendra help"
+  rescue CliException => error
+    puts error.message
   end
 
   private 
