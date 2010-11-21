@@ -75,9 +75,6 @@ class CliInvoker
         else
           evalstr = "@klass.#{funcname}(\"#{arguments}\")"
         end
-        #puts arguments
-        #puts evalstr
-        #puts
         begin
           eval(evalstr)
         rescue CliException => error
