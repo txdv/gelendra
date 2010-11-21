@@ -28,12 +28,12 @@ end
 
 class Package
   
-  def initialize(fullfilename)
-    @fullfilename = fullfilename
+  def initialize(fullpath)
+    @fullpath = fullpath
   end
 
   def open
-    @zip = Zip::ZipFile.open(@fullfilename, "r")
+    @zip = Zip::ZipFile.open(@fullpath, "r")
   end
 
   def close
@@ -125,7 +125,7 @@ class PackageManager
   end
 
   def remove(package)
-    filelist =  @localinfo.files(package)
+    filelist = @localinfo.files(package)
     filelist.each do |file| 
       if (!File.directory?(file))
         if File.exists?(file)
