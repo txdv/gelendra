@@ -41,8 +41,7 @@ class Package
   end
 
   def bsp_info
-    
-    return BSP.get_info(get_bsp.get_input_stream) if is_map?
+    return BSP.get_info(get_bsp.get_input_stream) if has_map?
     return nil
   end
 
@@ -50,17 +49,14 @@ class Package
     @zip.entries.reject { |e| e.is_directory }.collect { |e| e.name.shift("/") }.sort
   end
 
-  def is_map?
+  def has_map?
     !get_bsp.nil?
   end
-
 
   def get_bsp
     bsp = nil
     @zip.entries.each do |entry|
-      if File.extname(entry.name) == ".bsp"
-        return entry
-      end
+      return entry if File.extname(entry.name) == ".bsp"
     end
     return nil
   end
@@ -68,7 +64,6 @@ class Package
   def get_wad_entries
     return @zip.entries.reject { |e| File.extname(e.name) != ".wad" }
   end
-
 
 end
 
@@ -81,7 +76,7 @@ class PackageManager
     pack = Package.new(package)
     pack.open
     
-    if (!pack.is_map?)
+    if !pack.has_map?
       pack.close
       return
     end
@@ -127,7 +122,7 @@ class PackageManager
   def remove(package)
     filelist = @localinfo.files(package)
     filelist.each do |file| 
-      if (!File.directory?(file))
+      if !File.directory?(file)
         if File.exists?(file)
           puts "\tremoving #{file}"
           FileUtils.rm file
