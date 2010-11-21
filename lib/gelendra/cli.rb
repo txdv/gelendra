@@ -30,7 +30,6 @@
 # TODO: Add clver clash resolver
 
 # CliInvoker:
-# TODO: Adjust CliInvoker to better work (let single command lines work)
 # TODO: Add command line function help definition support in CliInvoker
 
 # Misc:
@@ -59,26 +58,25 @@ class CliInvoker
     methods = @methods
 
     x = 0
-    while (methods.size > 1)
+    while x < ARGV.size
       methods = collect_start(methods, ARGV[x])
       methods = trunc(methods, ARGV[x].to_s)
       name.push ARGV[x]
-      
-      if (methods.size == 1)
-        funcname = name.join("_")
-        arguments = "\"#{ARGV[x+1..-1].join('", "')}\""
-
-        evalstr = "@klass.#{funcname}"                       if arguments.size == 0
-        evalstr = "@klass.#{funcname}(#{arguments.inspect})" if arguments.size == 1
-        evalstr = "@klass.#{funcname}(#{arguments})"         if arguments.size > 1
-
-        eval(evalstr)
-
-        return
-      end
       x += 1
     end
-    puts "gelendra: did not understand you, maybe you need some help? type gelendra help"
+
+    funcname = name.join("_")
+
+    raise "No such command, consider using help" if !@klass.public_methods.include?(funcname)
+
+    arguments = ARGV[x..-1].join('", "')
+
+    evalstr = "@klass.#{funcname}"                       if arguments.size == 0
+    evalstr = "@klass.#{funcname}(#{arguments.inspect})" if arguments.size == 1
+    evalstr = "@klass.#{funcname}(\"#{arguments}\")"     if arguments.size > 1
+
+    eval(evalstr)
+
   rescue CliException => error
     puts error.message
   end
