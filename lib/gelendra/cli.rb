@@ -601,8 +601,8 @@ class Cli2 < CliBase
   end
 
   command :arguments => [ "source dir", "destination dir" ],
-          :help => "searches in the source dir for all possible files, creates self contained zip packages for every map file.",
-          :string => :create_packages do |src, dst|
+          :help      => "searches in the source dir for all possible files, creates self contained zip packages for every map file.",
+          :string    => :create_packages do |src, dst|
 
     file_list = Dir.find_all_files(src)
     fl = PackageFileList.new(file_list)
@@ -632,8 +632,8 @@ class Cli2 < CliBase
   end
 
   command :arguments => [ "source dir", "destination dir" ],
-          :help => "creates a file index of unique files with different subversion directories.",
-          :string => :create_root do |src, dst|
+          :help      => "creates a file index of unique files with different subversion directories.",
+          :string    => :create_root do |src, dst|
 
     file_list = Dir.find_all_files(src)
     fl = PackageFileList.new(file_list)
@@ -644,8 +644,9 @@ class Cli2 < CliBase
   end
 
   command :arguments => [ "directory" ],
-          :help => "add a directory to the basedir list, gelendra will look for packages inside it",
-          :string => :basedir_add do |dir|
+          :help      => "add a directory to the basedir list, gelendra will look for packages inside it",
+          :string    => :basedir_add do |dir|
+
     r "No such directory: #{dir}" if !File.directory?(dir)
 
     dir = File.expand_path(dir)
@@ -658,8 +659,8 @@ class Cli2 < CliBase
   end
 
   command :arguments => [ "directory" ],
-          :help => "removes a a directory from the basedir list",
-          :string => :basedir_rem do |dir|
+          :help      => "removes a a directory from the basedir list",
+          :string    => :basedir_rem do |dir|
 
     r "No such directory: #{dir}" if !File.directory?(dir)
 
@@ -672,9 +673,10 @@ class Cli2 < CliBase
     puts "removed from basedir list: #{dir}"
   end
 
-  command :help => "lists all added directories added to the basedir list",
-          :arugment => [ "directory" ],
-          :string => :basedir_list do
+  command :arugments => [ "directory" ],
+          :help      => "lists all added directories added to the basedir list",
+          :string    => :basedir_list do
+
     puts "Basedir list:\n"
     puts
     puts @baseinfo.base_dir
